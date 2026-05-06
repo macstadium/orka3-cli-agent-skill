@@ -25,6 +25,8 @@ Orka virtualizes macOS on physical Mac hardware. The CLI (`orka3`) manages VMs, 
 
 **Namespace resolution (v3.5.2+)** — Priority: `--namespace` flag > `ORKA_DEFAULT_NAMESPACE` env var > kubeconfig context > `orka-default`.
 
+**Kubernetes upgrade resilience (v3.6+)** — Most orka3 commands continue working during k8s control-plane upgrades. Only `login` and `vm push` require the API server; expect failures for those two until the upgrade completes.
+
 ## Quick CLI Guide
 
 ### Setup
@@ -171,3 +173,8 @@ Quick command syntax is above. Load references for complete workflows, detailed 
 | **Any deployment failure or VM issue** | `references/troubleshooting/deployment-issues.md` |
 | Async ops stuck, cache issues | `references/troubleshooting/image-issues.md` |
 | Screen Sharing, SSH, ports | `references/troubleshooting/network-issues.md` |
+| GitLab Custom/Shell executor | `references/integrations/gitlab.md` |
+| Packer plugin (image builds) | `references/integrations/packer.md` |
+| GitHub Actions (ephemeral runners) | `references/integrations/github-actions.md` |
+| Buildkite (ephemeral/permanent agents) | `references/integrations/buildkite.md` |
+| TeamCity cloud agent plugin | `references/integrations/teamcity.md` |
