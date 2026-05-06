@@ -28,6 +28,7 @@ Structured Markdown context for AI agents to work accurately with the Orka3 CLI.
 **Execution** means the agent can call `orka3` directly on your machine. **Guidance only** means the agent gives you the correct commands; you run them yourself. Either way, the skill content is the same.
 
 > **Note:** When using an execution-capable agent, make sure you're connected to your Orka cluster via VPN before invoking CLI commands.
+> **Important:** AI agents can make mistakes, especially with destructive operations like deleting VMs or modifying namespaces. Always review what the agent plans to do before confirming, and keep a human in the loop for anything touching production infrastructure.
 
 ## Prerequisites
 
