@@ -63,8 +63,8 @@ VM_NAME=$(orka3 vm deploy --config ci-build --namespace orka-ci --generate-name 
 
 # Get VM connection info
 VM_INFO=$(orka3 vm list $VM_NAME --namespace orka-ci -o json)
-VM_IP=$(echo $VM_INFO | jq -r '.items[0].ip')
-VM_SSH_PORT=$(echo $VM_INFO | jq -r '.items[0].ssh')
+VM_IP=$(echo $VM_INFO | jq -r '.[0].ip')
+VM_SSH_PORT=$(echo $VM_INFO | jq -r '.[0].ssh')
 
 # Run your build (via SSH)
 ssh -p $VM_SSH_PORT admin@$VM_IP 'cd /path/to/project && make test'

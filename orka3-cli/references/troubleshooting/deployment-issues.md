@@ -220,6 +220,16 @@ orka3 vm deploy --image <IMAGE> --tag <TAG> --tag-required=false
 orka3 vm deploy --image <IMAGE>
 ```
 
+## VM Start Diagnostics (v3.6+)
+
+In Orka 3.6+, VM start failures surface actionable error messages. Earlier versions returned empty messages for the same failures.
+
+**Common error types:**
+- **VZErrorDomain** — macOS Virtualization framework error, usually a hardware/image compatibility issue or resource exhaustion at the host level. Check `/opt/orka/logs/vm/` for the full error code.
+- **Configuration validation failures** — invalid disk size, unsupported CPU/memory combination, or missing image.
+
+If you're on an older version and getting empty error messages on VM start failures, upgrading to 3.6 will surface the actual cause.
+
 ## Log Sources for Deep Troubleshooting (v3.4+)
 
 When CLI diagnostics aren't sufficient, check the underlying logs:

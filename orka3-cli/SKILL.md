@@ -17,13 +17,15 @@ Orka virtualizes macOS on physical Mac hardware. The CLI (`orka3`) manages VMs, 
 
 **Auth lifecycle** — `orka3 login` opens a browser and stores a token in `~/.kube/config`. User tokens expire in **1 hour**. For anything automated (CI/CD, scripts, pipelines), use service accounts: `orka3 sa create <name>` then `orka3 sa token <name>` (default: 1 year, or `--no-expiration`).
 
-**Execution contexts** — (1) Local machine: full CLI, interactive login. (2) CI/CD pipeline: ephemeral, service account tokens only, credentials via CI settings not `export`. (3) Claude Code: can probe the cluster directly. (4) Chat/conversation: suggest commands, can't execute.
+**Execution contexts** — In CI/CD pipelines, use service accounts only (user tokens expire in 1 hour) and pass credentials via CI settings, not `export`. In Claude Code, the CLI is available — probe the cluster with `orka3 node list`.
 
 **Async operations** — `vm save`, `vm commit`, `vm push`, `image copy`, `imagecache add` are all async. Check status with `orka3 image list <IMAGE>`, `orka3 ic info <IMAGE>`, or `orka3 vm get-push-status`.
 
 **Shared disk (v3.5.2+)** — Attaches a shared disk to VMs on a host. Apple Silicon: **1 VM per node** when enabled. Requires Ansible config + per-host first-time formatting (see `shared-disk-workflows.md`).
 
 **Namespace resolution (v3.5.2+)** — Priority: `--namespace` flag > `ORKA_DEFAULT_NAMESPACE` env var > kubeconfig context > `orka-default`.
+
+**Kubernetes upgrade resilience (v3.6+)** — Most orka3 commands continue working during k8s control-plane upgrades. Only `login` and `vm push` require the API server; expect failures for those two until the upgrade completes.
 
 ## Quick CLI Guide
 
@@ -171,3 +173,8 @@ Quick command syntax is above. Load references for complete workflows, detailed 
 | **Any deployment failure or VM issue** | `references/troubleshooting/deployment-issues.md` |
 | Async ops stuck, cache issues | `references/troubleshooting/image-issues.md` |
 | Screen Sharing, SSH, ports | `references/troubleshooting/network-issues.md` |
+| GitLab Custom/Shell executor | `references/integrations/gitlab.md` |
+| Packer plugin (image builds) | `references/integrations/packer.md` |
+| GitHub Actions (ephemeral runners) | `references/integrations/github-actions.md` |
+| Buildkite (ephemeral/permanent agents) | `references/integrations/buildkite.md` |
+| TeamCity cloud agent plugin | `references/integrations/teamcity.md` |
