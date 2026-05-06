@@ -3,7 +3,12 @@
 Repo: https://github.com/macstadium/orka-integrations/tree/master/Buildkite
 
 ## Contents
-- [Ephemeral agent (proxy pattern)](#ephemeral-agent-proxy-pattern) — [Permanent agent](#permanent-agent) — [Auth](#auth) — [Env vars](#environment-variables) — [Gotchas](#gotchas)
+- [Ephemeral agent (proxy pattern)](#ephemeral-agent-proxy-pattern)
+- [Permanent agent](#permanent-agent)
+- [Auth](#auth)
+- [Environment variables](#environment-variables)
+- [Connectivity](#connectivity)
+- [Gotchas](#gotchas)
 
 ## Ephemeral agent (proxy pattern)
 

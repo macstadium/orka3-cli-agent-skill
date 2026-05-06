@@ -3,7 +3,11 @@
 Repo: https://github.com/macstadium/orka-teamcity-plugin
 
 ## Contents
-- [What it does](#what-it-does) — [Requirements](#requirements) — [Setup](#setup) — [Configuration](#configuration-in-teamcity) — [Gotchas](#gotchas)
+- [What it does](#what-it-does)
+- [Requirements](#requirements)
+- [Setup](#setup)
+- [Configuration in TeamCity](#configuration-in-teamcity)
+- [Gotchas](#gotchas)
 
 ## What it does
 
