@@ -17,7 +17,7 @@ Orka virtualizes macOS on physical Mac hardware. The CLI (`orka3`) manages VMs, 
 
 **Auth lifecycle** — `orka3 login` opens a browser and stores a token in `~/.kube/config`. User tokens expire in **1 hour**. For anything automated (CI/CD, scripts, pipelines), use service accounts: `orka3 sa create <name>` then `orka3 sa token <name>` (default: 1 year, or `--no-expiration`).
 
-**Execution contexts** — (1) Local machine: full CLI, interactive login. (2) CI/CD pipeline: ephemeral, service account tokens only, credentials via CI settings not `export`. (3) Claude Code: can probe the cluster directly. (4) Chat/conversation: suggest commands, can't execute.
+**Execution contexts** — In CI/CD pipelines, use service accounts only (user tokens expire in 1 hour) and pass credentials via CI settings, not `export`. In Claude Code, the CLI is available — probe the cluster with `orka3 node list`.
 
 **Async operations** — `vm save`, `vm commit`, `vm push`, `image copy`, `imagecache add` are all async. Check status with `orka3 image list <IMAGE>`, `orka3 ic info <IMAGE>`, or `orka3 vm get-push-status`.
 
