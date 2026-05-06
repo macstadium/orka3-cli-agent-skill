@@ -8,7 +8,7 @@ Structured Markdown context for AI agents to work accurately with the Orka3 CLI.
 
 | Path | Description |
 |------|-------------|
-| `orka3-cli/SKILL.md` | Core concepts, quick reference, v3.5.2 features, log sources |
+| `orka3-cli/SKILL.md` | Core concepts, quick reference, v3.6 features, log sources |
 | `orka3-cli/references/commands/` | Command syntax by domain: VM, image, node, admin, config, registry, vm-config |
 | `orka3-cli/references/workflows/` | Step-by-step guides: CI/CD, scaling, migration, image prep, admin setup, shared disk |
 | `orka3-cli/references/troubleshooting/` | Auth, deployment, image, and network issues |
