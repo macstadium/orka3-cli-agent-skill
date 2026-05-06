@@ -1,7 +1,13 @@
 # GitLab Integration
 
 ## Contents
-- [Custom executor (ephemeral)](#custom-executor-ephemeral) — [Shell executor (permanent)](#shell-executor-permanent) — [Auth](#auth) — [Env vars](#environment-variables) — [Gotchas](#gotchas)
+- [Custom executor (ephemeral)](#custom-executor-ephemeral)
+- [Shell executor (permanent)](#shell-executor-permanent)
+- [Auth](#auth)
+- [Environment variables](#environment-variables)
+- [Connectivity](#connectivity)
+- [IP mapping](#ip-mapping)
+- [Gotchas](#gotchas)
 
 ## Custom executor (ephemeral)
 

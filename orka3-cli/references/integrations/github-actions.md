@@ -4,7 +4,13 @@ Repo: https://github.com/macstadium/orka-github-actions-integration
 Image: `ghcr.io/macstadium/orka-github-runner:<tag>`
 
 ## Contents
-- [What it does](#what-it-does) — [Prerequisites](#prerequisites) — [Configuration](#configuration) — [Multiple runners](#multiple-runners) — [Gotchas](#gotchas)
+- [What it does](#what-it-does)
+- [Prerequisites](#prerequisites)
+- [Configuration](#configuration)
+- [Key variables](#key-variables)
+- [Auth](#auth)
+- [Multiple runners](#multiple-runners)
+- [Gotchas](#gotchas)
 
 ## What it does
 

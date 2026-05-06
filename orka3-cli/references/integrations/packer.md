@@ -4,7 +4,13 @@ Repo: https://github.com/macstadium/packer-plugin-macstadium-orka
 Current version: `3.1.2`
 
 ## Contents
-- [What it does](#what-it-does) — [Configuration](#configuration) — [OCI images](#oci-images) — [Dev toolkit examples](#dev-toolkit-examples) — [Gotchas](#gotchas)
+- [What it does](#what-it-does)
+- [Configuration](#configuration)
+- [Key variables](#key-variables)
+- [Auth](#auth)
+- [OCI images](#oci-images)
+- [Dev toolkit examples](#dev-toolkit-examples)
+- [Gotchas](#gotchas)
 
 ## What it does
 
