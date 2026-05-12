@@ -36,6 +36,24 @@ Structured Markdown context for AI agents to work accurately with the Orka3 CLI.
 - Orka3 CLI installed and on your `$PATH` (`orka3`)
 - The AI agent of your choice
 
+## Companion: MacStadium Docs MCP
+
+For documentation lookup, use the [MacStadium Docs MCP server](https://docs.macstadium.com/mcp) alongside this skill. The two are complementary:
+
+| | This skill | Docs MCP |
+|---|---|---|
+| **What it does** | Runs `orka3` commands and guides operational tasks | Answers questions by searching the MacStadium documentation |
+| **Best for** | Deploying VMs, managing images, setting up CI/CD, troubleshooting cluster state | Looking up feature details, understanding architecture, finding configuration options |
+| **Agent access** | Execution-capable agents run commands directly | Any MCP-compatible agent |
+
+To add the Docs MCP to Claude Code:
+
+```bash
+claude mcp add macstadium-docs --url https://docs.macstadium.com/mcp
+```
+
+With both loaded, your agent handles "do this in Orka" and "what does this Orka feature do" without leaving the terminal.
+
 ## Installation
 
 ### Claude Code
