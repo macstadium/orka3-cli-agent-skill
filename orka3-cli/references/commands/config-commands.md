@@ -145,3 +145,5 @@ orka3 version [flags]
 **Output Includes:**
 - CLI build information
 - Compatibility with Orka cluster
+- Upgrade Service operator version (v3.6+)
+- Upgrade Service agent version per node (v3.6+)

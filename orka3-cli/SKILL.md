@@ -27,6 +27,8 @@ Orka virtualizes macOS on physical Mac hardware. The CLI (`orka3`) manages VMs, 
 
 **Kubernetes upgrade resilience (v3.6+)** — Most orka3 commands continue working during k8s control-plane upgrades. Only `login` and `vm push` require the API server; expect failures for those two until the upgrade completes.
 
+**VM network isolation (v3.6+, Apple Silicon only)** — MacStadium can configure per-cluster allow/deny rules by CIDR block to restrict VM network access. Configured by support, not via CLI. Contact support@macstadium.com to set up.
+
 ## Quick CLI Guide
 
 ### Setup

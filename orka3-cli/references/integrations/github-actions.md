@@ -16,6 +16,8 @@ Image: `ghcr.io/macstadium/orka-github-runner:<tag>`
 
 A Docker-based controller that listens for GitHub Actions workflow runs and spins up ephemeral Orka VMs to execute them. Uses GitHub runner scale sets (similar to ARC). Each job gets a fresh VM; the VM is deleted after the job completes.
 
+The integration tracks in-flight VM deployments to prevent over-provisioning when multiple jobs start simultaneously. On restart, it reconciles existing VMs (adopting running ones, cleaning up failed/finished ones) and reuses the existing runner scale set so in-progress jobs continue uninterrupted.
+
 ## Prerequisites
 
 - GitHub App (not a PAT). Instructions: `docs/github-app-setup-steps.md` in the repo.
@@ -53,7 +55,7 @@ docker run -v /path/to/.env:/.env ghcr.io/macstadium/orka-github-runner:<tag>
 |----------|----------|-------------|
 | `GITHUB_APP_ID` | Yes | GitHub App ID |
 | `GITHUB_APP_INSTALLATION_ID` | Yes | GitHub App installation ID |
-| `GITHUB_APP_PRIVATE_KEY_PATH` or `GITHUB_APP_PRIVATE_KEY` | Yes | Private key file path or contents (PKCS#1 RSA format) |
+| `GITHUB_APP_PRIVATE_KEY_PATH` or `GITHUB_APP_PRIVATE_KEY` | Yes | Private key file path or contents (PKCS#1 RSA or ECDSA format) |
 | `GITHUB_URL` | Yes | Repo or org URL, e.g. `https://github.com/myorg` |
 | `ORKA_URL` | Yes | Orka API URL, e.g. `http://10.221.188.20` |
 | `ORKA_TOKEN` | Yes | Service account token |
@@ -66,6 +68,8 @@ docker run -v /path/to/.env:/.env ghcr.io/macstadium/orka-github-runner:<tag>
 | `LOG_LEVEL` | No | `info` (default), `debug`, `warning`, `error` |
 | `ENABLE_METRICS` | No | Expose Prometheus metrics at `/metrics` on `METRICS_ADDR` |
 | `METRICS_ADDR` | No | Default `:8080` |
+| `ENABLE_RECONCILIATION` | No | Reconcile existing VMs on restart instead of ignoring them (default: `True`) |
+| `MANAGE_RUNNER_SCALE_SETS` | No | Reuse existing runner scale set on restart (default: `True`) |
 
 ## Auth
 
@@ -84,7 +88,7 @@ orka3 sa token <name> --no-expiration
 
 ## Private key format
 
-GitHub App private keys must be in PKCS#1 RSA format. If needed, convert:
+GitHub App private keys must be in PKCS#1 RSA or ECDSA format (ECDSA support added in Orka 3.6). If needed, convert an RSA key:
 
 ```bash
 ssh-keygen -p -m pem -f /path/to/private-key.pem
