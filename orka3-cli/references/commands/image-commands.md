@@ -118,6 +118,43 @@ orka3 ic add sonoma:latest --tags jenkins-builds
 - Image must be pulled first (or be an OCI image)
 - `--nodes`, `--tags`, and `--all` are mutually exclusive
 
+### orka3 imagecache remove (alias: ic) — v3.6.3+
+
+Selectively remove a cached image from Apple Silicon nodes without support intervention.
+
+**Syntax:**
+```bash
+orka3 imagecache remove <IMAGE> {--nodes|--tags|--all} [--namespace <NS>] [flags]
+```
+
+**Options:**
+- `--nodes string` - Specific nodes (comma-separated)
+- `--tags string` - Node tags to filter by (comma-separated)
+- `--all` - Remove from all nodes in namespace
+- `-n, --namespace string` - Target namespace
+
+**Examples:**
+```bash
+orka3 ic remove sonoma-90gb-orka3-arm --all
+orka3 ic remove sequoia:latest --nodes mini-arm-10,mini-arm-11
+orka3 ic remove sonoma:latest --tags jenkins-builds
+```
+
+**Removal states:**
+
+| State | Meaning |
+|-------|---------|
+| `Removing` | Remove job is running on the target node |
+| `Failed` | Remove job failed; image stays cached. Retry with the same command. |
+
+**Notes:**
+- Async — check status with `orka3 imagecache info <IMAGE>`
+- `--nodes`, `--tags`, and `--all` are mutually exclusive; exactly one is required
+- `--tags` matches nodes that have ALL listed tags
+- If the image is not cached on a targeted node, the operation completes without error
+- If a targeted node no longer exists, the cache entry is cleaned up immediately
+- API: `POST /api/v1/namespaces/{namespace}/cache/images/{image}/remove` (207 Multi-Status)
+
 ### orka3 imagecache info (alias: ic)
 
 Display the caching status of an image across nodes.

@@ -171,6 +171,8 @@ Quick command syntax is above. Load references for complete workflows, detailed 
 | Batch deployments, optimization | `references/workflows/scaling-workflows.md` |
 | Intel → ARM migration, backup | `references/workflows/migration-workflows.md` |
 | Shared disk setup, first-time init | `references/workflows/shared-disk-workflows.md` |
+| Cluster upgrades, Kubernetes upgrades, AWS upgrades | `references/workflows/upgrade-workflows.md` |
+| License management, seat activation, LicenseSpring portal | `references/workflows/license-management.md` |
 | **Any auth error or permission issue** | `references/troubleshooting/auth-issues.md` |
 | **Any deployment failure or VM issue** | `references/troubleshooting/deployment-issues.md` |
 | Async ops stuck, cache issues | `references/troubleshooting/image-issues.md` |

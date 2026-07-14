@@ -66,10 +66,12 @@ docker run -v /path/to/.env:/.env ghcr.io/macstadium/orka-github-runner:<tag>
 | `ORKA_ENABLE_NODE_IP_MAPPING` | No | Enable if nodes have private IPs not reachable from container |
 | `ORKA_NODE_IP_MAPPING` | No | JSON map of node internal IPs to external IPs |
 | `LOG_LEVEL` | No | `info` (default), `debug`, `warning`, `error` |
-| `ENABLE_METRICS` | No | Expose Prometheus metrics at `/metrics` on `METRICS_ADDR` |
-| `METRICS_ADDR` | No | Default `:8080` |
-| `ENABLE_RECONCILIATION` | No | Reconcile existing VMs on restart instead of ignoring them (default: `True`) |
-| `MANAGE_RUNNER_SCALE_SETS` | No | Reuse existing runner scale set on restart (default: `True`) |
+| `ORKA_VM_METADATA` | No | Custom VM metadata passed to the VM, as `key=value` comma-separated pairs |
+| `ENABLE_METRICS` | No | Expose Prometheus metrics at `/metrics` on `METRICS_ADDR` (default: `false`) |
+| `METRICS_ADDR` | No | Address for Prometheus metrics endpoint (default: `:8080`) |
+| `METRICS_POLL_INTERVAL` | No | How often runner scale set stats are polled for metrics (default: `30s`) |
+| `ENABLE_RECONCILIATION` | No | Reconcile existing VMs on restart: adopt running VMs, clean up failed/finished ones (default: `true`) |
+| `MANAGE_RUNNER_SCALE_SETS` | No | `true` = delete existing scale set on startup and exit; `false` = reuse if found (default: `false`) |
 
 ## Auth
 
@@ -117,4 +119,4 @@ jobs:
 - **GitHub App, not PAT.** Authentication requires a GitHub App. A personal access token will not work.
 - **ORKA_VM_CONFIG must exist before the container starts.** Create it with `orka3 vmc create`.
 - **Node IP mapping.** If the container is outside the Orka network, set `ORKA_ENABLE_NODE_IP_MAPPING=true` and provide the mapping JSON.
-- **VM tracker cleans up orphaned VMs** every `VM_TRACKER_INTERVAL` (default 300s). VMs without a corresponding GitHub runner for two consecutive checks are deleted.
+- **Orphaned VMs are cleaned up automatically.** VMs without a corresponding GitHub runner for two consecutive reconciliation checks are deleted. Runner deregistration uses exponential backoff on failure.
