@@ -10,7 +10,8 @@ Structured Markdown context for AI agents to work accurately with the Orka3 CLI.
 |------|-------------|
 | `orka3-cli/SKILL.md` | Core concepts, quick reference, v3.6 features, log sources |
 | `orka3-cli/references/commands/` | Command syntax by domain: VM, image, node, admin, config, registry, vm-config |
-| `orka3-cli/references/workflows/` | Step-by-step guides: CI/CD, scaling, migration, image prep, admin setup, shared disk |
+| `orka3-cli/references/workflows/` | Step-by-step guides: CI/CD, scaling, migration, image prep, admin setup, shared disk, cluster upgrades, license management |
+| `orka3-cli/references/integrations/` | Integration references: GitHub Actions, GitLab, Buildkite, TeamCity, Packer |
 | `orka3-cli/references/troubleshooting/` | Auth, deployment, image, and network issues |
 
 ## Agent compatibility

@@ -27,6 +27,8 @@ Orka virtualizes macOS on physical Mac hardware. The CLI (`orka3`) manages VMs, 
 
 **Kubernetes upgrade resilience (v3.6+)** — Most orka3 commands continue working during k8s control-plane upgrades. Only `login` and `vm push` require the API server; expect failures for those two until the upgrade completes.
 
+**VM network isolation (v3.6+, Apple Silicon only)** — MacStadium can configure per-cluster allow/deny rules by CIDR block to restrict VM network access. Configured by support, not via CLI. Contact support@macstadium.com to set up.
+
 ## Quick CLI Guide
 
 ### Setup
@@ -169,6 +171,8 @@ Quick command syntax is above. Load references for complete workflows, detailed 
 | Batch deployments, optimization | `references/workflows/scaling-workflows.md` |
 | Intel → ARM migration, backup | `references/workflows/migration-workflows.md` |
 | Shared disk setup, first-time init | `references/workflows/shared-disk-workflows.md` |
+| Cluster upgrades, Kubernetes upgrades, AWS upgrades | `references/workflows/upgrade-workflows.md` |
+| License management, seat activation, LicenseSpring portal | `references/workflows/license-management.md` |
 | **Any auth error or permission issue** | `references/troubleshooting/auth-issues.md` |
 | **Any deployment failure or VM issue** | `references/troubleshooting/deployment-issues.md` |
 | Async ops stuck, cache issues | `references/troubleshooting/image-issues.md` |
@@ -178,3 +182,5 @@ Quick command syntax is above. Load references for complete workflows, detailed 
 | GitHub Actions (ephemeral runners) | `references/integrations/github-actions.md` |
 | Buildkite (ephemeral/permanent agents) | `references/integrations/buildkite.md` |
 | TeamCity cloud agent plugin | `references/integrations/teamcity.md` |
+
+If you need full Orka documentation beyond what's in this skill, it's available via MCP at `https://docs.macstadium.com/mcp`. Prefer the skill contents first for CLI tasks.

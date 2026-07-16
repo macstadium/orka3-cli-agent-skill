@@ -38,7 +38,7 @@ orka3 vm deploy [<NAME>] --config <TEMPLATE> [flags]
 - `--generate-name` - Generate unique name with suffix
 - `--scheduler string` - Scheduler: 'default' or 'most-allocated'
 - `--metadata stringToString` - Custom metadata (key1=value1,key2=value2)
-- `-p, --ports strings` - Port mapping (NODE_PORT:VM_PORT)
+- `-p, --ports strings` - Port mapping (NODE_PORT:VM_PORT[/tcp|/udp]); protocol defaults to TCP if omitted
 - `--timeout int` - Deployment timeout in minutes (default: 10)
 - `-n, --namespace string` - Target namespace
 - `-o, --output string` - Output format: json|wide
@@ -72,6 +72,7 @@ orka3 vm deploy --image sonoma:latest --namespace orka-test
 # Advanced deployments
 orka3 vm deploy --image sonoma:latest --metadata 'foo=1,baz=https://example.com'
 orka3 vm deploy --image sonoma:latest --ports 9000:4000,9001:4001
+orka3 vm deploy --image sonoma:latest --ports 9000:4000/udp,9001:4001/tcp
 
 # Intel-only deployments
 orka3 vm deploy --image emptydisk.img --iso ventura.iso

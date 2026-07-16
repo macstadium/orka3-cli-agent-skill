@@ -31,8 +31,9 @@ orka3 vm list base-config --output wide
 #    - Configure settings
 #    - Install/upgrade Orka VM Tools:
 #      brew install orka-vm-tools  # or brew upgrade orka-vm-tools
-#      Note: Base images from ghcr.io/macstadium/orka-images (3.6+) already include
-#      the current VM Tools version. Skip this step if using a current base image.
+#      Note: Base images from ghcr.io/macstadium/orka-images are automatically kept
+#      current with VM Tools on each Orka release (3.6+). Skip this step if using a
+#      current GHCR base image. Only needed for custom images not derived from one.
 
 # 5. Save as new image (preserves original)
 orka3 vm save base-config my-configured-sonoma

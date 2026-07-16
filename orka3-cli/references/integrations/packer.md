@@ -93,6 +93,10 @@ The repo includes example templates in `examples/` (Sequoia and Tahoe, 90 GB and
 
 **Known fix (PR #84, pending merge):** The examples had two bugs — Homebrew requires Xcode CLT to be installed first (the templates skipped this step), and the `brew shellenv` eval line was missing a closing `)` so PATH was never set in `.zprofile`. Both are fixed in PR #84. Until it merges, the existing example templates will fail Homebrew installation.
 
+## Bridge networking
+
+Bridge networking (introduced in Orka 3.5) is supported by the Packer plugin as of Orka 3.6. No plugin config change is needed — the plugin works transparently with bridge-networked clusters.
+
 ## Gotchas
 
 - **VPN required.** Packer must have network connectivity to the Orka endpoint. If running locally, connect via VPN first.

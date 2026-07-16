@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-07-14
+
+### Added
+
+- `references/workflows/upgrade-workflows.md` — on-prem and hosted upgrade process, Kubernetes upgrade impact and post-upgrade verification, AWS upgrade via SSH and SSM methods, Upgrade Service (`orka3 version` / `kubectl get orkanodes`)
+- `references/workflows/license-management.md` — LicenseSpring portal auth, seat usage, node activation revocation, AWS license key override, automated expiry notifications
+- `orka3 imagecache remove` (GA in 3.6.3) — full command reference in `image-commands.md`: syntax, `--nodes`/`--tags`/`--all` flags, removal states (`Removing`/`Failed`), edge cases (no-op if not cached, immediate cleanup if node gone)
+- `upgrade-workflows.md` and `license-management.md` added to SKILL.md reference table
+- Integrations directory added to README reference table
+
+### Changed
+
+- `SKILL.md`: added VM network isolation note (v3.6+, Apple Silicon only) and Kubernetes upgrade resilience note (v3.6+)
+- `references/commands/vm-commands.md`: UDP/TCP protocol suffix documented for `--ports` flag
+- `references/commands/config-commands.md`: `orka3 version` now shows Upgrade Service operator version; `kubectl get orkanodes -o wide` shows per-node agent version
+- `references/integrations/github-actions.md`: corrected `MANAGE_RUNNER_SCALE_SETS` default (`false`, not `true`); added `ORKA_VM_METADATA` and `METRICS_POLL_INTERVAL`; added ECDSA private key support note; consolidated orphaned VM cleanup note; removed undocumented `VM_TRACKER_INTERVAL`
+- `references/integrations/packer.md`: added bridge networking note
+- `references/workflows/image-workflows.md`: updated VM Tools note to reflect automated GHCR updates
+
 ## [1.2.1] - 2026-02-11
 
 ### Fixed
