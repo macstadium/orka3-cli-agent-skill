@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-08-24
+
+### Added
+
+- `references/commands/emulator-commands.md` — Android emulator command reference (early access, Orka 3.7.0-alpha+, Apple Silicon only): `orka3 emulator deploy`/`list`/`delete` syntax, flags, `adbRelayIP`/`adbRelayPort` connection notes, and known limitations (node-level network isolation, NAT-only, ephemeral AVD state, no SDK pre-caching)
+- `SKILL.md`: Android Emulators bullet in Essential Context, command examples under Quick CLI Guide, and a new Reference Files row for `emulator-commands.md`
+- `references/troubleshooting/image-issues.md`: "Fixed in Orka 3.6.4" section covering the caching-job deadline fix (`cache_job_active_deadline_seconds`), the 3.6.3 cache-eviction regression fix, and the `--enable-custom-pods` role binding fix; new "Known Issue" section for the open 3.6.3+ re-caching bug (same-name image commits skipping re-cache) with workaround
+- `references/troubleshooting/auth-issues.md`: note on the 3.6.4 fix for missing `orka-dev` role bindings on `--enable-custom-pods` namespaces, and manual remediation via MacStadium support for namespaces created before the fix
+- `references/commands/admin-commands.md`: cross-reference note on the same `--enable-custom-pods` role binding fix under `orka3 namespace create`
+
+### Fixed
+
+- `orka3-cli/SKILL.md`: replaced content that had silently regressed to the pre-PR#5 format (stale "Current Version: 3.5.2" banner, verbose prose) in commit `2205675`; rebuilt from the actively-maintained rewrite so it matches the reference files, which had continued to receive updates through 3.6.3 independently of `SKILL.md`
+
 ## [1.3.0] - 2026-07-14
 
 ### Added

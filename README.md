@@ -8,8 +8,8 @@ Structured Markdown context for AI agents to work accurately with the Orka3 CLI.
 
 | Path | Description |
 |------|-------------|
-| `orka3-cli/SKILL.md` | Core concepts, quick reference, v3.6 features, log sources |
-| `orka3-cli/references/commands/` | Command syntax by domain: VM, image, node, admin, config, registry, vm-config |
+| `orka3-cli/SKILL.md` | Core concepts, quick reference, v3.6.4 features, log sources, early-access Android emulator support (v3.7.0-alpha+) |
+| `orka3-cli/references/commands/` | Command syntax by domain: VM, image, emulator (early access), node, admin, config, registry, vm-config |
 | `orka3-cli/references/workflows/` | Step-by-step guides: CI/CD, scaling, migration, image prep, admin setup, shared disk, cluster upgrades, license management |
 | `orka3-cli/references/integrations/` | Integration references: GitHub Actions, GitLab, Buildkite, TeamCity, Packer |
 | `orka3-cli/references/troubleshooting/` | Auth, deployment, image, and network issues |
@@ -175,6 +175,11 @@ Execution-capable agents (Claude Code, Gemini CLI) will run the commands directl
 - Push images to OCI registries
 - Generate empty images for OS installs (Intel)
 
+### Android emulators (early access, Orka 3.7.0-alpha+, Apple Silicon only)
+- Deploy an Android emulator attached to a running macOS VM
+- List and delete emulators; automatic cleanup when the parent VM is deleted
+- Connect over ADB using the relay IP/port returned by the CLI
+
 ### Infrastructure
 - View and manage cluster nodes
 - Tag nodes for workload affinity
@@ -199,6 +204,7 @@ Execution-capable agents (Claude Code, Gemini CLI) will run the commands directl
 | ISO Attach | Yes | No |
 | Image Cache | No | Yes |
 | OCI Push | No | Yes |
+| Android Emulators (early access, v3.7.0-alpha+) | No | Yes |
 
 ## Building from source
 
