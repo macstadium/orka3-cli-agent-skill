@@ -191,3 +191,5 @@ Most questions are answerable from this file. Load references for full flag deta
 | GitHub Actions (ephemeral runners) | `references/integrations/github-actions.md` |
 | Buildkite (ephemeral/permanent agents) | `references/integrations/buildkite.md` |
 | TeamCity cloud agent plugin | `references/integrations/teamcity.md` |
+
+If you need full Orka documentation beyond what's in this skill, it's available via MCP at `https://docs.macstadium.com/mcp`. Prefer the skill contents first for CLI tasks.
