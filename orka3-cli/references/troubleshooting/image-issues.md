@@ -6,6 +6,8 @@ This guide covers common image-related issues with the Orka3 CLI.
 - [Problem: Async image operations stuck in progress](#problem-async-image-operations-stuck-in-progress)
 - [Problem: Cannot delete image (in use)](#problem-cannot-delete-image-in-use)
 - [Problem: Image cache not working (Apple Silicon)](#problem-image-cache-not-working-apple-silicon)
+- [Fixed in Orka 3.6.4: caching jobs could stall indefinitely](#fixed-in-orka-364-caching-jobs-could-stall-indefinitely)
+- [Known Issue: re-caching an image committed under the same name (v3.6.3+)](#known-issue-re-caching-an-image-committed-under-the-same-name-v363)
 - [Problem: "Invalid image format"](#problem-invalid-image-format)
 - [Problem: Image push fails (Apple Silicon)](#problem-image-push-fails-apple-silicon)
 - [Problem: Image copy operation slow or failing](#problem-image-copy-operation-slow-or-failing)
@@ -105,6 +107,40 @@ orka3 ic add <IMAGE> --nodes <NODE_NAME>
 orka3 node list --output wide
 
 # 5. If cache fails persistently, contact MacStadium support
+```
+
+## Fixed in Orka 3.6.4: caching jobs could stall indefinitely
+
+Three caching-related bugs were fixed in Orka 3.6.4. If you're on an earlier version and hitting these symptoms, upgrading resolves them.
+
+**Caching jobs that couldn't schedule, or got stuck mid-import, never failed or released resources.** If 4 or more caching jobs on the same node were stuck this way, no new VMs could deploy on that node.
+- **Fixed:** Caching jobs now fail after a bounded deadline (3 hours by default). The deadline is tunable via the `cache_job_active_deadline_seconds` Ansible variable — this is a cluster-admin/Ansible-level setting, not an `orka3` CLI flag. If a caching job fails after ~3 hours with no other explanation, this deadline is the cause, not a new bug.
+
+**Cached images could be evicted unexpectedly** (a regression introduced in 3.6.3).
+- **Fixed:** Orka now retains cached images as expected. No workaround was available pre-3.6.4 other than re-caching (`orka3 imagecache add <IMAGE> --all`).
+
+**Namespaces created with `orka3 namespace create --enable-custom-pods` didn't grant the `orka-dev` role binding to users added to the namespace afterward,** leaving them without dev-level access.
+- **Fixed:** Namespaces created on 3.6.4+ are unaffected. Existing custom-pods namespaces created before upgrading do **not** resolve automatically — contact [MacStadium support](mailto:support@macstadium.com) to have the missing role binding applied. See also `references/troubleshooting/auth-issues.md`.
+
+## Known Issue: re-caching an image committed under the same name (v3.6.3+)
+
+**Status:** Open, no fix yet. Affects Orka 3.6.3 and later.
+
+**Symptoms:**
+- You commit changes to an existing image while keeping the same name/tag
+- A subsequent `orka3 imagecache add <IMAGE>` reports the image as already cached on some nodes and skips re-caching the updated content
+- Affects both OCI and NFS images
+
+**Impact:** VMs still deploy from the updated image — the first VM deployment from that image on an affected node re-caches it automatically. That first deployment is just slower, since the cache rebuilds at deploy time instead of ahead of time.
+
+**Workaround:**
+```bash
+# Option 1: Force a re-cache explicitly
+orka3 imagecache remove <IMAGE> --all      # or --nodes / --tags
+orka3 imagecache add <IMAGE> --all
+
+# Option 2: Deploy a VM from the image once to force the re-cache
+orka3 vm deploy --image <IMAGE>
 ```
 
 ## Problem: "Invalid image format"

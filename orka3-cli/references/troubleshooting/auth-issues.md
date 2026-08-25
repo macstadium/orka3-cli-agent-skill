@@ -107,6 +107,8 @@ orka3 rb add-subject --namespace <TARGET_NAMESPACE> \
   --serviceaccount <SA_NAMESPACE>:<SA_NAME>
 ```
 
+**Known issue, fixed in Orka 3.6.4:** Namespaces created with `orka3 namespace create --enable-custom-pods` didn't grant the `orka-dev` role binding to users added afterward, leaving them without dev-level access even after `rb add-subject` succeeded. Namespaces created on 3.6.4+ are unaffected. If your custom-pods namespace was created before upgrading, this doesn't resolve automatically — contact [MacStadium support](mailto:support@macstadium.com) to have the missing role binding applied manually.
+
 ## Problem: Cannot create namespace / admin commands fail
 
 **Symptoms:**

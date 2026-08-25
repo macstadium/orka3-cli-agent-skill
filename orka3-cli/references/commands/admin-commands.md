@@ -38,6 +38,8 @@ orka3 namespace create orka-test
 orka3 namespace create orka-cp --enable-custom-pods
 ```
 
+**Note (fixed in 3.6.4):** On `--enable-custom-pods` namespaces created before 3.6.4, users added via `rb add-subject` may be missing the `orka-dev` role binding. See `references/troubleshooting/auth-issues.md`.
+
 ### orka3 namespace list
 
 List all namespaces.
