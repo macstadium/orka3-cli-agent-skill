@@ -165,25 +165,35 @@ Orka Anywhere is any deployment you run and manage yourself (AWS-hosted or fully
 
 **AWS-hosted:** see the [AWS Upgrades](#aws-upgrades) section above (CodeBuild + SSH/SSM ARM node tooling).
 
-**On-premises:** reuses the exact `ghcr.io/macstadium/orka-ansible-onprem` container and the same `cluster.yml`/`nodes.yml`/`hosts` files used at install. Playbooks are idempotent, re-running them re-converges the cluster to the target version:
+**On-premises:** reuses the exact `ghcr.io/macstadium/orka-ansible-onprem` container and the same `cluster.yml`/`nodes.yml`/`hosts` files used at install. Playbooks are idempotent, re-running them re-converges the cluster to the target version. The upgrade is the same container-then-playbook flow as install, just with the target version's tag on the image:
+
 ```bash
-# Services upgrade — use the target version's tag
+# Services upgrade — enter the container built for your target version, then run the playbook inside it
+docker run -it -v <kube_config_location>:/root/.kube/config -v ./cluster.yml:/ansible/group_vars/all/cluster.yml ghcr.io/macstadium/orka-ansible-onprem:<version_tag> bash
+# inside the container, in /ansible:
 ansible-playbook site.yml
 
-# ARM node tooling upgrade
+# ARM node tooling upgrade — same pattern, with the node-specific mounts
+docker run -it -v <kube_config_location>:/root/.kube/config -v ./cluster.yml:/ansible/group_vars/all/cluster.yml -v ./nodes.yml:/ansible/group_vars/arm-nodes/nodes.yml -v ./hosts:/ansible/hosts -v <mac_ssh_key_location>:/root/.ssh/id_rsa ghcr.io/macstadium/orka-ansible-onprem:<version_tag> bash
+# inside the container, in /ansible:
 ansible-playbook configure-arm.yml -i hosts --ask-become-pass
 ```
-Node tooling (Virtual Kubelet, Orka Engine) is version-gated, not blindly replaced: the playbook compares installed vs. target version and only updates on a mismatch, so re-running against nodes already on the target is a no-op. You normally don't need to set `osx_node_orka_engine_version` or `osx_node_orka_vk_version` in `nodes.yml` for a routine upgrade, only if MacStadium has given you a specific custom build.
+`<version_tag>` is the target Orka version (e.g. `3.6.4`), the same variable named in the install docs, not a new upgrade-specific flag. Node tooling (Virtual Kubelet, Orka Engine) is version-gated, not blindly replaced: the playbook compares installed vs. target version and only updates on a mismatch, so re-running against nodes already on the target is a no-op. You normally don't need to set `osx_node_orka_engine_version` or `osx_node_orka_vk_version` in `nodes.yml` for a routine upgrade, only if MacStadium has given you a specific custom build.
 
 **Hybrid (EKS control plane + on-prem Mac nodes):** upgrade each part with its own workflow above.
 
-**Migrating Orka Anywhere's own Upgrade Service from v1 to v2:** a dedicated `kubectl`-only script handles this, separate from the cluster/node-tooling upgrade above:
+**Migrating Orka Anywhere's own Upgrade Service from v1 to v2 (on-prem only):** on-prem clusters already run Upgrade Service as v1; a dedicated `kubectl`-only script migrates it, separate from the cluster/node-tooling upgrade above:
 ```bash
 curl -fsSLO https://distribution.macstadium.com/orka-releases/helpers/migrate-upgrade-service.sh
 chmod +x migrate-upgrade-service.sh
 ./migrate-upgrade-service.sh          # latest release, or pass a version as the first arg
 ```
 Requires `kubectl` (admin context) and `jq`, plus outbound HTTPS to distribution.macstadium.com. Installs v2 CRDs, applies updated permissions, removes v1 leftovers, and waits up to 7 minutes for every node's upgrade agent to check in ("waiting for agent leases" messages during that window are expected). If your cluster's Mac node labels don't expose a standard `arm64` architecture label, set `ORKA_EXPECTED_AGENTS` to the actual node count first. Before running it, confirm the cluster's own v1→v2 self-upgrade already completed (`orka3 upgrade service status` should show an operator version starting `2.0.0-`), the script doesn't perform that step itself.
+
+**AWS-hosted Anywhere: fresh v2 install, not a migration.** Upgrade Service isn't present by default on AWS-hosted Anywhere, there's no v1 to migrate from. Install it via CodeBuild the same way as ARM node tooling, using the Ansible image tagged for your current version:
+```bash
+AWS_DEFAULT_REGION=<region> ansible-playbook -i arm.ssh.aws_ec2.yml /ansible/deploy-upgrade-service.yml --private-key ~/.ssh/id_rsa
+```
 
 ## Host node macOS upgrades (3.7.0-alpha+)
 
