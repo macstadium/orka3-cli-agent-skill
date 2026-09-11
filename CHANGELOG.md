@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-09-11
+
+### Added
+
+- `references/workflows/upgrade-workflows.md`: real Upgrade Service v2 self-service command flow (`orka3 upgrade run/status/history/versions`, `orka3 upgrade service status/agents`), replacing the stale v1 "MacStadium pushes upgrades" description
+- `references/workflows/upgrade-workflows.md`: new "Orka Anywhere upgrades (self-service, AWS-hosted or on-premises)" section — Ansible-based idempotent re-upgrade process, `osx_node_orka_engine_version`/`osx_node_orka_vk_version` version-pin vars, and the v1→v2 Upgrade Service migration script for Anywhere clusters
+- `references/workflows/upgrade-workflows.md`: new "Host node macOS upgrades (3.7.0-alpha+)" section — macOS Tahoe host node upgrade support and the tunable per-node pod quota (`osx_node_orka_quota_pod`, default `4`)
+- `SKILL.md`: Essential Context bullets for the pod quota/Tahoe upgrade facts and the self-service (not support-ticket-only) upgrade model for both MSDC and Orka Anywhere
+- `references/troubleshooting/image-issues.md`: new "Problem: `imagecache remove` fails or isn't recognized despite an up-to-date CLI" entry — this is a cluster-side version gate (3.6.3+), not a CLI one, a real, repeated customer point of confusion
+
+### Fixed
+
+- `SKILL.md`: corrected "Orka Cluster Upgrades" framing, upgrades are self-service via the CLI as of 3.6+ Upgrade Service v2, not support-ticket-initiated only
+- `SKILL.md`: the "Claude Code" execution-context bullet now names Gemini CLI too and generalizes to "execution-capable agent," matching the skill's own documented multi-agent compatibility (see README)
+
 ## [1.4.0] - 2026-08-24
 
 ### Added

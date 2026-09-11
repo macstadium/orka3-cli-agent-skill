@@ -14,7 +14,7 @@ Orka runs macOS VMs on physical Mac hardware in two architectures: Intel (amd64)
 
 User tokens expire in 1 hour. All automation and CI/CD must use service accounts (`orka3 sa create`, `orka3 sa token`), which support long-lived or non-expiring tokens.
 
-Four execution contexts: local machine (full CLI), CI/CD (ephemeral containers — env vars injected at runtime, failed VMs often auto-deleted), Claude Code (has CLI access — probe with `orka3 node list`), and chat (no CLI access — answer from documentation only).
+Four execution contexts: local machine (full CLI), CI/CD (ephemeral containers — env vars injected at runtime, failed VMs often auto-deleted), an execution-capable agent (Claude Code, Gemini CLI — has CLI access, probe with `orka3 node list`), and a guidance-only agent or chat (no CLI access — answer from documentation only, the human runs the command).
 
 Image save, commit, push, and caching are async. Always pair with the status-check command: `orka3 image list <IMAGE>`, `orka3 imagecache info <IMAGE>`, or `orka3 vm get-push-status <JOB>`.
 
@@ -25,6 +25,10 @@ Kubernetes upgrade resilience (v3.6+): Most orka3 commands continue working duri
 VM network isolation (v3.6+, Apple Silicon only): MacStadium can configure per-cluster allow/deny rules by CIDR block to restrict VM network access. Configured by support, not via CLI. Contact support@macstadium.com to set up.
 
 Android Emulators (Apple Silicon, 3.7+ early access): `orka3 emulator deploy|list|delete` runs an Android emulator on the same host node as a running macOS VM, connected over an ADB relay. Not GA, not for production. Network isolation is node-level (any VM on the node can reach any emulator on it), NAT only, and ephemeral (no persistent AVD state). See `references/commands/emulator-commands.md`.
+
+Host node macOS upgrades and pod quota (3.7.0-alpha+): Orka can upgrade Apple silicon host nodes to macOS Tahoe (26) in place. Each node also advertises a Kubernetes scheduler pod quota (VM + emulator + image-cache job pods, default `4`, tunable via `osx_node_orka_quota_pod`), running emulators eats into this quota fast, two VMs with paired emulators already hit the default with no room for an image-cache job.
+
+Upgrades are self-service, not support-ticket-only: MSDC clusters (3.6+) upgrade via the Upgrade Service (`orka3 upgrade run/status/history/versions`, `orka3 upgrade service status/agents`). Orka Anywhere (self-managed AWS or on-prem) upgrades by re-running the same Ansible install process against the target version's image, idempotent, no separate procedure. See `references/workflows/upgrade-workflows.md` for both flows.
 
 ## Quick CLI Guide
 
