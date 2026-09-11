@@ -1,14 +1,15 @@
 # Upgrade Workflows Reference
 
-## Orka Cluster Upgrades (On-Prem / Hosted)
+## Orka Cluster Upgrades (MSDC — MacStadium Data Centers)
 
-Upgrades are initiated through MacStadium support, not the CLI directly.
+Self-service as of Orka 3.6+ via the Upgrade Service (v2), started and monitored from the `orka3` CLI. See [Upgrade Service (self-service, 3.6+)](#upgrade-service-self-service-36) below for the full command flow. Only fall back to a MacStadium support ticket if the cluster hasn't completed its v1→v2 migration yet, or for anything the Upgrade Service doesn't cover (Kubernetes control-plane version changes, hardware changes).
 
 ### Process
 1. Review release notes for the target version
-2. Submit a support ticket via the MacStadium portal
-3. Schedule a maintenance window (Mon–Thu, 9am or 1pm EST; up to 3 hours)
-4. After upgrade: download the new CLI version and regenerate service account tokens
+2. Confirm Upgrade Service and node agents are healthy: `orka3 upgrade versions`, `orka3 upgrade service status`, `orka3 upgrade service agents`
+3. Start the run: `orka3 upgrade run --version <VERSION>` (admin access required)
+4. Monitor: `orka3 upgrade status <run-name>`
+5. After upgrade: download the new CLI version and regenerate service account tokens if this was a full version upgrade
 
 ### What persists across a full version upgrade
 - Orka users
@@ -132,11 +133,72 @@ aws codebuild start-build --project-name <project-name> \
 
 ---
 
-## Upgrade Service (3.6+)
+## Upgrade Service (self-service, 3.6+)
 
-The Upgrade Service is a Kubernetes-native update mechanism deployed automatically in 3.6.0. It enables MacStadium to push cluster upgrades to your environment.
+Orka 3.6.0 introduced Upgrade Service v1, which let MacStadium push upgrades to a cluster. As of the v1→v2 migration, Upgrade Service is self-service: you start, monitor, and review upgrades yourself from the `orka3` CLI, for both MSDC and Orka Anywhere clusters. It is not a scheduler or an auto-updater; it replaces manually sequencing service, agent, and node-component upgrades one at a time for a single planned run you start yourself.
+
+**Before starting a run:**
+```bash
+orka3 upgrade versions              # Current version + available releases
+orka3 upgrade service status        # Eligible nodes vs. live/seen agents
+orka3 upgrade service agents        # Per-node agent version, status, lease age
+```
+Resolve any node reporting `STALE` or `MISSING` before starting. If your OrkaNode roster isn't in the default namespace, pass `-n <namespace>`.
+
+**Starting and monitoring a run:**
+```bash
+orka3 upgrade run --version <VERSION>     # Admin access required
+orka3 upgrade run --version latest        # Resolves once at run creation, fixed for that run
+orka3 upgrade status                      # Most recent run
+orka3 upgrade status <run-name>
+orka3 upgrade history                     # Retained runs, newest first (10 max)
+```
+All four commands support `-o json` for scripting.
+
+**How a run behaves:** validates the target release, upgrades Upgrade Service itself if needed, upgrades per-node agents, upgrades node components (canary node first, then a bounded rolling window), upgrades core control-plane components, then remaining Orka services. If a node upgrade fails, no new node work is released, in-flight work finishes, and the run is marked failed with the control plane left on its previous version, every node ends as succeeded/failed/skipped with a reason. Retrying a failed run means creating a new run at the same target; already-converged components are idempotent. There is no full-cluster rollback, and deleting a run does not cancel in-flight work.
+
+**Until a cluster completes its first successful v2 run**, `orka3 upgrade versions` reports its version as `unknown`.
+
+## Orka Anywhere upgrades (self-service, AWS-hosted or on-premises)
+
+Orka Anywhere is any deployment you run and manage yourself (AWS-hosted or fully on-prem), as opposed to MSDC. Upgrades reuse the same Ansible-based process used to install the cluster, pointed at the Ansible image tagged for your target release, there is no separate upgrade procedure to learn.
+
+**AWS-hosted:** see the [AWS Upgrades](#aws-upgrades) section above (CodeBuild + SSH/SSM ARM node tooling).
+
+**On-premises:** reuses the exact `ghcr.io/macstadium/orka-ansible-onprem` container and the same `cluster.yml`/`nodes.yml`/`hosts` files used at install. Playbooks are idempotent, re-running them re-converges the cluster to the target version. The upgrade is the same container-then-playbook flow as install, just with the target version's tag on the image:
 
 ```bash
-orka3 version                      # Shows Upgrade Service operator version
-kubectl get orkanodes -o wide      # Shows Upgrade Service agent version per node
+# Services upgrade — enter the container built for your target version, then run the playbook inside it
+docker run -it -v <kube_config_location>:/root/.kube/config -v ./cluster.yml:/ansible/group_vars/all/cluster.yml ghcr.io/macstadium/orka-ansible-onprem:<version_tag> bash
+# inside the container, in /ansible:
+ansible-playbook site.yml
+
+# ARM node tooling upgrade — same pattern, with the node-specific mounts
+docker run -it -v <kube_config_location>:/root/.kube/config -v ./cluster.yml:/ansible/group_vars/all/cluster.yml -v ./nodes.yml:/ansible/group_vars/arm-nodes/nodes.yml -v ./hosts:/ansible/hosts -v <mac_ssh_key_location>:/root/.ssh/id_rsa ghcr.io/macstadium/orka-ansible-onprem:<version_tag> bash
+# inside the container, in /ansible:
+ansible-playbook configure-arm.yml -i hosts --ask-become-pass
 ```
+`<version_tag>` is the target Orka version (e.g. `3.6.4`), the same variable named in the install docs, not a new upgrade-specific flag. Node tooling (Virtual Kubelet, Orka Engine) is version-gated, not blindly replaced: the playbook compares installed vs. target version and only updates on a mismatch, so re-running against nodes already on the target is a no-op. You normally don't need to set `osx_node_orka_engine_version` or `osx_node_orka_vk_version` in `nodes.yml` for a routine upgrade, only if MacStadium has given you a specific custom build.
+
+**Hybrid (EKS control plane + on-prem Mac nodes):** upgrade each part with its own workflow above.
+
+**Migrating Orka Anywhere's own Upgrade Service from v1 to v2 (on-prem only):** on-prem clusters already run Upgrade Service as v1; a dedicated `kubectl`-only script migrates it, separate from the cluster/node-tooling upgrade above:
+```bash
+curl -fsSLO https://distribution.macstadium.com/orka-releases/helpers/migrate-upgrade-service.sh
+chmod +x migrate-upgrade-service.sh
+./migrate-upgrade-service.sh          # latest release, or pass a version as the first arg
+```
+Requires `kubectl` (admin context) and `jq`, plus outbound HTTPS to distribution.macstadium.com. Installs v2 CRDs, applies updated permissions, removes v1 leftovers, and waits up to 7 minutes for every node's upgrade agent to check in ("waiting for agent leases" messages during that window are expected). If your cluster's Mac node labels don't expose a standard `arm64` architecture label, set `ORKA_EXPECTED_AGENTS` to the actual node count first. Before running it, confirm the cluster's own v1→v2 self-upgrade already completed (`orka3 upgrade service status` should show an operator version starting `2.0.0-`), the script doesn't perform that step itself.
+
+**AWS-hosted Anywhere: fresh v2 install, not a migration.** Upgrade Service isn't present by default on AWS-hosted Anywhere, there's no v1 to migrate from. Install it via CodeBuild the same way as ARM node tooling, using the Ansible image tagged for your current version:
+```bash
+AWS_DEFAULT_REGION=<region> ansible-playbook -i arm.ssh.aws_ec2.yml /ansible/deploy-upgrade-service.yml --private-key ~/.ssh/id_rsa
+```
+
+## Host node macOS upgrades (3.7.0-alpha+)
+
+Orka can upgrade existing Apple silicon host nodes to macOS Tahoe (26) as of 3.7.0-alpha; earlier 3.7.0-alpha builds only recognized Sequoia as an upgrade target. This is the physical host's OS, not a guest VM's OS, and is unrelated to the Orka version upgrades above.
+
+Multi-node host OS upgrades are throttled to avoid overloading the control plane on large clusters, and transient node-tooling failures during an upgrade now retry automatically instead of failing the whole run.
+
+**Per-node pod quota (3.7.0-alpha+):** each Apple silicon node advertises a pod quota to the Kubernetes scheduler, how many VM, emulator, and image-cache job pods it can run at once. Default is `4`, tunable via the `osx_node_orka_quota_pod` Ansible variable. If running Android emulators, plan for headroom: a node running two VMs and their two paired emulators is already at the default quota, leaving no room for an image-cache job until one finishes. Contact MacStadium support to have the quota raised for a cluster.
