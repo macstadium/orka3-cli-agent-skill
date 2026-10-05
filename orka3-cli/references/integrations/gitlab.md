@@ -1,5 +1,8 @@
 # GitLab Integration
 
+Repo: https://github.com/macstadium/orka-integrations/tree/master/GitLab  
+Current release: `v2.0.1`
+
 ## Contents
 - [Custom executor (ephemeral)](#custom-executor-ephemeral)
 - [Shell executor (permanent)](#shell-executor-permanent)
@@ -14,10 +17,11 @@
 The Custom executor runs each CI/CD job inside a fresh Orka VM, then deletes it after. The runner is a Docker container running MacStadium-provided scripts that handle VM lifecycle.
 
 **Setup summary:**
-1. Create a base image with SSH enabled (private key, no passphrase)
+1. Create a base image with SSH enabled (private key, no passphrase) and the `gitlab-runner` binary installed. Without the binary, cache and artifacts are disabled (job log: `Missing gitlab-runner. Extracting cache is disabled.`)
 2. Create a VM config from that image: `orka3 vmc create <name> --image <image>`
 3. Build and run the Docker container from the [Dockerfile](https://github.com/macstadium/orka-integrations/blob/master/GitLab/Dockerfile)
 4. Register the runner inside the container using `TOKEN=${REGISTRATION_TOKEN}`
+5. Set `concurrent` (and per-runner `limit`) in `config.toml` at or below VM slot capacity (2 x Apple silicon nodes in the target namespace). The template ships with `concurrent = 1`.
 
 ## Shell executor (permanent)
 
@@ -31,7 +35,13 @@ Use a service account token for `ORKA_TOKEN`. User tokens expire in 1 hour and w
 orka3 sa token <service-account-name>
 ```
 
-**Note:** The custom-executor.md doc lists `orka3 user get-token` as an option — that is wrong for CI/CD. Service account tokens only.
+Where the control plane caps token lifetime (EKS), use a non-expiring token:
+
+```bash
+orka3 sa token <service-account-name> --no-expiration
+```
+
+**Note:** The custom-executor.md doc lists `orka3 user get-token` as an option. That is wrong for CI/CD. Service account tokens only.
 
 ## Environment variables
 
@@ -40,14 +50,14 @@ orka3 sa token <service-account-name>
 | `ORKA_TOKEN` | Yes | GitLab CI/CD Variables | Service account token |
 | `ORKA_ENDPOINT` | Yes | Docker container env | Orka API URL, e.g. `http://10.221.188.20` (no trailing slash) |
 | `ORKA_CONFIG_NAME` | Yes | GitLab CI/CD Variables | VM config name |
-| `ORKA_SSH_KEY_FILE` | Yes | Mount into container | Private key contents — no passphrase |
+| `ORKA_SSH_KEY_FILE` | Yes | GitLab CI/CD Variables only | Private key contents (not a path), no passphrase |
 | `ORKA_VM_USER` | No | GitLab CI/CD Variables | SSH user, default `admin` |
 | `ORKA_VM_NAME_PREFIX` | No | GitLab CI/CD Variables | VM name prefix, default `gl-runner` |
-| `VM_DEPLOYMENT_ATTEMPTS` | No | GitLab CI/CD Variables | Retry attempts, default `1` |
+| `VM_DEPLOYMENT_ATTEMPTS` | No | GitLab CI/CD Variables | Deploy attempts per job, default `1`. Adds to GitLab's own 3 retries |
 
-**Two scopes:** Variables like `ORKA_ENDPOINT` that are needed at container startup go in the Docker `--env` flag. Variables like `ORKA_TOKEN` that are needed during job execution go in GitLab CI/CD Variables (Settings > CI/CD > Variables). Mark sensitive variables as Masked.
+**Two scopes:** Variables like `ORKA_ENDPOINT` that are needed at container startup go in the Docker `--env` flag. Variables like `ORKA_TOKEN` that are needed during job execution go in GitLab CI/CD Variables (Settings > CI/CD > Variables). Mark sensitive variables as Masked. Every `ORKA_*` variable except `ORKA_SSH_KEY_FILE` works in either place; if both are set, the container env wins.
 
-**SSH key:** Prefer mounting the key file into the container (`-v /path/to/keys:/keys`) over storing key contents as a GitLab variable.
+**SSH key:** The scripts read the key only from the GitLab CI/CD variable `ORKA_SSH_KEY_FILE` and write its contents to `~/.ssh/orka_deployment_key`. A key file mounted into the container, or a container env var, is ignored (and the key file at that path is overwritten). Store the private key contents in a masked, protected CI/CD variable named `ORKA_SSH_KEY_FILE` (type Variable).
 
 ## Connectivity
 
@@ -73,3 +83,6 @@ If Orka node IPs are private and the runner connects over a public IP, configure
 - **ORKA_ENDPOINT must include the protocol and no trailing slash.** `http://10.221.188.20` is correct; `10.221.188.20` and `http://10.221.188.20/` are not.
 - **Don't use grep or pipes for CLI output.** Use `orka3 vmc list <name>` to check if a config exists.
 - **VM config must exist before the runner starts.** Create it with `orka3 vmc create <name> --image <image> --cpu <n>`.
+- **Failures exit with `$SYSTEM_FAILURE_EXIT_CODE`.** Deploy, IP, and SSH failures in the prepare stage are reported to GitLab as system failures, not build failures.
+- **Debug:** run the runner with `gitlab-runner --debug run`.
+- **Integration error strings** (`Invalid ip`, `Waited 30 seconds for sshd to start`, and others) are covered in the integration's [troubleshooting.md](https://github.com/macstadium/orka-integrations/blob/master/GitLab/troubleshooting.md). Point users there instead of restating them.

@@ -12,6 +12,12 @@ description: >-
 
 Orka runs macOS VMs on physical Mac hardware in two architectures: Intel (amd64) — Mac Pro, Intel Mac mini, iMac Pro — and Apple Silicon (arm64) — M1/M2/M3/M4 Mac mini, Mac Studio. They have different command sets: ARM gets `vm push` and `imagecache`; Intel gets power operations (`start`/`stop`/`suspend`/`resume`/`revert`), ISO management, and GPU passthrough.
 
+Apple silicon nodes run at most 2 VMs each (Apple EULA). Capacity in VM slots is 2 x Apple silicon nodes; set CI concurrency limits at or below that.
+
+Orka 3.6 is the last release with Intel support (Intel supported through March 2028; plan migration by December 2027).
+
+All `-o json` output from the CLI is a bare JSON array with camelCase keys (`.[0].name`, `.[]`), never `{items: [...]}`; the REST API wraps lists in `items` (see `references/commands/rest-api.md`).
+
 User tokens expire in 1 hour. All automation and CI/CD must use service accounts (`orka3 sa create`, `orka3 sa token`), which support long-lived or non-expiring tokens.
 
 Four execution contexts: local machine (full CLI), CI/CD (ephemeral containers — env vars injected at runtime, failed VMs often auto-deleted), an execution-capable agent (Claude Code, Gemini CLI — has CLI access, probe with `orka3 node list`), and a guidance-only agent or chat (no CLI access — answer from documentation only, the human runs the command).
@@ -24,7 +30,7 @@ Kubernetes upgrade resilience (v3.6+): Most orka3 commands continue working duri
 
 VM network isolation (v3.6+, Apple Silicon only): MacStadium can configure per-cluster allow/deny rules by CIDR block to restrict VM network access. Configured by support, not via CLI. Contact support@macstadium.com to set up.
 
-Android Emulators (Apple Silicon, 3.7+ early access): `orka3 emulator deploy|list|delete` runs an Android emulator on the same host node as a running macOS VM, connected over an ADB relay. Not GA, not for production. Network isolation is node-level (any VM on the node can reach any emulator on it), NAT only, and ephemeral (no persistent AVD state). See `references/commands/emulator-commands.md`.
+Android Emulators (Apple Silicon, 3.7+ early access): `orka3 emulator deploy|list|delete` runs an Android emulator on the same host node as a running macOS VM, connected over an ADB relay. `--vm`, `--platform`, and `--image-type` are required; there are no defaults. Not GA, not for production. Network isolation is node-level (any VM on the node can reach any emulator on it), NAT only, and ephemeral (no persistent AVD state). See `references/commands/emulator-commands.md`.
 
 Host node macOS upgrades and pod quota (3.7.0-alpha+): Orka can upgrade Apple silicon host nodes to macOS Tahoe (26) in place. Each node also advertises a Kubernetes scheduler pod quota (VM + emulator + image-cache job pods, default `4`, tunable via `osx_node_orka_quota_pod`), running emulators eats into this quota fast, two VMs with paired emulators already hit the default with no room for an image-cache job.
 
@@ -88,12 +94,13 @@ orka3 imagecache info <IMAGE>              # Check status
 
 ### Android Emulators (Apple Silicon, early access, v3.7.0-alpha+)
 ```bash
-orka3 emulator deploy --vm <VM>                                 # Defaults: android-36, pixel_9, google_apis
-orka3 emulator deploy --vm <VM> --platform android-35 --device pixel_8
-orka3 emulator list --vm <VM>
-orka3 emulator delete <EMULATOR>
-# Connect using the response's adbRelayIP/adbRelayPort, never a hardcoded IP:
-adb connect <adbRelayIP>:<adbRelayPort>
+orka3 emulator deploy --vm <VM> --platform android-36 --image-type google_apis      # All three required, no defaults
+orka3 emulator deploy --vm <VM> --platform android-35 --image-type google_apis --device-profile pixel_8
+orka3 emulator list                        # All emulators in namespace
+orka3 emulator list <AVD_NAME>             # Filter by name
+orka3 emulator delete <AVD_NAME>
+# Connect using RELAY-IP/RELAY-PORT from `orka3 emulator list`, never a hardcoded IP:
+adb connect <RELAY_IP>:<RELAY_PORT>
 ```
 
 ### VM Config Templates
@@ -147,15 +154,15 @@ orka3 vm revert <VM>                       # Revert to base image
 
 ### Disk Resize
 ```bash
-orka3 vm resize <VM> <SIZE_GB>                                          # ARM (automatic)
+orka3 vm resize <VM> <SIZE_GB>                                          # ARM (needs Orka VM Tools in guest)
 orka3 vm resize <VM> <SIZE_GB> --user "$VM_USER" --password "$VM_PWD"   # Intel (needs SSH)
 ```
 
 ### OCI Registry Credentials (Admin)
 ```bash
-orka3 regcred add <URL> --username "$USER" --password "$TOKEN"
+echo "$REGISTRY_TOKEN" | orka3 regcred add <SERVER> --username <USER> --password-stdin
 orka3 regcred list
-orka3 regcred delete <NAME>
+orka3 regcred remove <SERVER>              # SERVER includes scheme, e.g. https://ghcr.io
 ```
 
 ### Output & Flags
@@ -177,6 +184,7 @@ Most questions are answerable from this file. Load references for full flag deta
 | Namespace, SA, rolebinding flags | `references/commands/admin-commands.md` |
 | Node list/tag/namespace flags | `references/commands/node-commands.md` |
 | CLI config, login, completion | `references/commands/config-commands.md` |
+| Orka REST API (Swagger, auth, request/response shapes) | `references/commands/rest-api.md` |
 | VM config template flags | `references/commands/vm-config-commands.md` |
 | CI/CD pipeline setup | `references/workflows/cicd-workflows.md` |
 | Custom images, OCI workflows | `references/workflows/image-workflows.md` |
@@ -186,6 +194,8 @@ Most questions are answerable from this file. Load references for full flag deta
 | VM shared attached disk (v3.5.2+) | `references/workflows/shared-disk-workflows.md` |
 | Cluster upgrades, Kubernetes upgrades, AWS upgrades | `references/workflows/upgrade-workflows.md` |
 | License management, seat activation, LicenseSpring portal | `references/workflows/license-management.md` |
+| Monitoring, Prometheus metrics, alerting | `references/workflows/monitoring.md` |
+| Orka Burst capacity | `references/workflows/burst-workflows.md` |
 | Token/permission errors | `references/troubleshooting/auth-issues.md` |
 | Resource errors, VM issues | `references/troubleshooting/deployment-issues.md` |
 | Async ops, image caching issues, 3.6.4 fixes | `references/troubleshooting/image-issues.md` |
@@ -195,5 +205,6 @@ Most questions are answerable from this file. Load references for full flag deta
 | GitHub Actions (ephemeral runners) | `references/integrations/github-actions.md` |
 | Buildkite (ephemeral/permanent agents) | `references/integrations/buildkite.md` |
 | TeamCity cloud agent plugin | `references/integrations/teamcity.md` |
+| Jenkins (Orka by MacStadium plugin) | `references/integrations/jenkins.md` |
 
 If you need full Orka documentation beyond what's in this skill, it's available via MCP at `https://docs.macstadium.com/mcp`. Prefer the skill contents first for CLI tasks.

@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-10-06
+
+Folds in verified findings from Robert Elwell's Orka agent playbooks, which were tested against a live Orka 3.6.3 cluster. Every item was checked against the Orka 3.6 CLI help, the Orka source, the public docs, or the integration repos before inclusion.
+
+### Added
+
+- `references/commands/rest-api.md`: Swagger UI, bearer auth with service-account tokens, endpoint paths, the `items` list wrapper, `customMetadata` on deploy, save/commit/push request bodies
+- `references/integrations/jenkins.md`: Orka by MacStadium plugin (v2.10) cloud and agent template fields, retention strategies, permanent agents, logging
+- `references/workflows/monitoring.md`: node exporter and operator scrape targets, Orka operator metric names (3.6), macOS vs Linux memory metrics, alerts for disk-driven cache eviction and CI backlog
+- `references/workflows/burst-workflows.md`: Orka Burst (3.3+) through the Portal API, with drain-before-disable ordering
+- `SKILL.md`: Apple silicon 2-VM-per-node limit and slot-based capacity, Orka 3.6 as the last Intel release, bare-array `-o json` shape
+- `vm-commands.md`: VM metadata server, `vm push` status values (`Ready`/`Failed`) and `-n`, guest `sync` before push/save/commit, save/commit require NFS image storage, display flag ranges, memory caps, `owner` in `vm list -o json`, deploy returns before macOS finishes booting
+- `image-commands.md`, `image-issues.md`: cache timing and eviction, cache job cost, never remove a cache during a deploy, pre-3.5.1 custom-namespace caching bug, `Unauthorized` on push with a certificate-only kubeconfig
+- `vm-config-commands.md`: configs always live in `orka-default`, no update command (blue/green rollout), half-node sizing
+- `node-commands.md`, `admin-workflows.md`: `node namespace` is refused while VMs run (drain first), Apple silicon can't join custom-pods namespaces, cordoned nodes still show READY
+- `admin-commands.md`: service-account token lifetime and revocation details, custom-pods toleration, `rb list-subjects` JSON shape
+- `deployment-issues.md`: real 3.6 error strings, 2-VM limit error, cordoned-node symptom, RFC 1123 vs DNS-1035 name errors, on-prem node diagnosis
+- `cicd-workflows.md`: CI concurrency at or below slot capacity, trap-based VM cleanup, leaked-VM cleanup by owner/prefix/age, integration smoke test
+- `github-actions.md`: `GITHUB_PAT` (v1.1.15), `ORKA_NAMESPACE`, `MAX_RUNNERS`, tracker and deregistration settings, runner metric names
+- `gitlab.md`, `buildkite.md`, `packer.md`: missing settings, defaults, and concurrency guidance
+
+### Fixed
+
+- Android emulator commands: `--platform` and `--image-type` are required with no defaults, the device flag is `--device-profile`, `emulator list` has no `--vm` filter, and connection details are `RELAY-IP`/`RELAY-PORT` (`relayIp`/`relayPort`), not `adbRelayIP`/`adbRelayPort`
+- `-o json` examples: `.[]` and `.[0].name`, not `.items[]` or `.name`
+- `orka3 vmc create` examples no longer pass `--namespace` (the flag doesn't exist)
+- `orka3 regcred remove <SERVER>`, not `regcred delete <NAME>`; `--password-stdin` instead of `--password`
+- Imagecache states are `Ready`, `Caching`, `Failed`, `Removing`, `RemoveFailed`
+- Apple silicon `vm resize` needs Orka VM Tools in the guest; it isn't automatic
+- `orka3 namespace list` is admin-only
+- Packer: `packer_push_timeout` isn't in plugin v3.1.2; debug flags are `no_delete_vm`/`no_create_image`
+- GitHub Actions: classic PATs are supported; private keys must be PKCS#1 RSA; `GITHUB_API_URL` is ignored
+- GitLab: the SSH key must be the contents of the `ORKA_SSH_KEY_FILE` CI/CD variable; a mounted key file is ignored
+- Removed `grep`, `awk`, and `sort` pipes on CLI output in favor of built-in filtering or `-o json | jq`
+
 ## [1.4.0] - 2026-09-11
 
 ### Added

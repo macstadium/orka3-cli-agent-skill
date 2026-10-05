@@ -31,14 +31,18 @@ orka3 vm deploy [<NAME>] --config <TEMPLATE> [flags]
 - `-i, --image string` - (Required if no --config) Base image (local or OCI)
 - `--config string` - VM configuration template
 - `-c, --cpu int` - Number of CPU cores (default: 3)
-- `-m, --memory float` - RAM in gigabytes
+- `-m, --memory float` - RAM in gigabytes. Max 32GB on 32GB nodes, 60GB on 64GB and 128GB nodes. If unset, defaults to a value based on the node with the least memory
 - `--node string` - Specific node for deployment
 - `--tag string` - Node affinity tag
 - `--tag-required` - Require tagged nodes
 - `--generate-name` - Generate unique name with suffix
 - `--scheduler string` - Scheduler: 'default' or 'most-allocated'
-- `--metadata stringToString` - Custom metadata (key1=value1,key2=value2)
-- `-p, --ports strings` - Port mapping (NODE_PORT:VM_PORT[/tcp|/udp]); protocol defaults to TCP if omitted
+- `--metadata stringToString` - Custom metadata (key1=value1,key2=value2). Keys and values can't contain `,` or `=`; the `orka_` prefix is reserved. See [VM metadata](#vm-metadata)
+- `-p, --ports strings` - Port mapping (NODE_PORT:VM_PORT[/tcp|/udp]); protocol defaults to TCP if omitted. Maps the node port to the VM port but does not open the port inside macOS
+- `--display-width int` - Virtual display width, 320-3840 (3.4+)
+- `--display-height int` - Virtual display height, 480-2160 (3.4+)
+- `--display-dpi int` - Virtual display DPI, 60-320 (3.4+)
+- `--disable-vnc` - Disable VNC. Locks you out unless the image has SSH or Screen Sharing enabled
 - `--timeout int` - Deployment timeout in minutes (default: 10)
 - `-n, --namespace string` - Target namespace
 - `-o, --output string` - Output format: json|wide
@@ -48,7 +52,7 @@ orka3 vm deploy [<NAME>] --config <TEMPLATE> [flags]
 - `--gpu` - Enable GPU passthrough (requires --disable-vnc)
 - `--system-serial string` - Custom serial number
 - `--disable-net-boost` - Disable network performance boost
-- `--disable-vnc` - Disable VNC
+- `--legacy-io` - Legacy IO, required for High Sierra and Mojave VMs
 
 **VM Name Requirements:**
 - Max 63 characters (including generated suffix)
@@ -85,6 +89,28 @@ orka3 vm deploy my-vm --config small-ventura-config
 orka3 vm deploy --config small-ventura-config --cpu 6 --memory 16
 ```
 
+**Notes:**
+- Deploy returns when the VM reaches `Running`, not when macOS has finished booting. Wait for SSH (poll the SSH port) before using the VM.
+
+### VM metadata
+
+Custom metadata is set at deploy time only and is readable from inside the VM through the metadata server:
+
+```bash
+curl http://169.254.169.254/metadata/            # All metadata, JSON
+curl http://169.254.169.254/metadata/<KEY>       # One key
+curl http://169.254.169.254/metadata/my%20key    # URL-encode keys with spaces
+```
+
+- Built-in keys: `orka_vm_id`, `orka_vm_name`, `orka_node_name`, `orka_base_image`, `orka_cpu`, `orka_memory`
+- Unauthenticated: never put secrets in metadata
+- The server can time out right after boot. Gate startup scripts on readiness:
+  ```bash
+  until curl -fs --max-time 2 http://169.254.169.254/metadata/ >/dev/null; do sleep 1; done
+  ```
+- Apple silicon: requires Orka VM Tools in the image (check with `sudo launchctl list com.orka.vm.tools`)
+- Custom metadata does not appear in `vm list` output
+
 ## orka3 vm list
 
 Show information about VMs.
@@ -107,7 +133,12 @@ orka3 vm list --namespace orka-test
 orka3 vm list mini-arm-14 -o wide
 ```
 
-**Note:** Stopped/suspended VMs appear as 'Running' when listed.
+**Notes:**
+- Stopped/suspended VMs appear as 'Running' when listed.
+- `-o json` includes `owner`, the identity that deployed the VM (for example `system:serviceaccount:<NS>:<SA>` or a user). With one service account per integration, use it to attribute leaked VMs:
+  ```bash
+  orka3 vm list -n <NS> -o json | jq -r '.[] | select(.owner == "system:serviceaccount:<NS>:<SA>") | .name'
+  ```
 
 ## orka3 vm delete
 
@@ -137,6 +168,8 @@ orka3 vm save <VM_NAME> <NEW_IMAGE_NAME> [--description '<DESC>'] [--namespace <
 - Preserves original image
 - Async operation (check with `orka3 image list <NAME>`)
 - Restarts the VM
+- Requires NFS image storage on the cluster. On Harbor/OCI-only clusters (the default for new deployments since 3.5) it fails with "image storage is not supported. You cannot run save or commit image commands"; use `vm push`
+- Run `sync` inside the guest first (see [Flush the guest before capturing](#flush-the-guest-before-capturing))
 
 ## orka3 vm commit
 
@@ -156,6 +189,8 @@ orka3 vm commit <VM_NAME> [--description '<DESC>'] [--namespace <NS>] [flags]
 - Intel: image must not be in use by other VMs
 - Async operation
 - Restarts the VM
+- Requires NFS image storage on the cluster (same error as `vm save` on Harbor/OCI-only clusters); use `vm push` there
+- Run `sync` inside the guest first (see [Flush the guest before capturing](#flush-the-guest-before-capturing))
 
 ## orka3 vm push (Apple Silicon only)
 
@@ -171,6 +206,9 @@ orka3 vm push <VM_NAME> <IMAGE[:TAG]> [--namespace <NS>] [flags]
 - Tag defaults to `latest` if not provided
 - Registry credentials required in same namespace
 - Async operation (check with `orka3 vm get-push-status`)
+- Does not restart the VM (`save` and `commit` do)
+- One push per VM at a time. A second push while one is running fails with `vm push operation already in progress for "<VM>"`
+- Run `sync` inside the guest first (see [Flush the guest before capturing](#flush-the-guest-before-capturing))
 
 **Examples:**
 ```bash
@@ -191,6 +229,24 @@ orka3 vm get-push-status [<JOB_NAME>] [--namespace <NS>] [--output <FORMAT>] [fl
 - Job name from push operation
 - Status viewable for 1 hour after completion
 - Lists all pushes if no job name provided
+- Push jobs live in the VM's namespace: pass `-n <NS>` for VMs outside `orka-default`
+- Status values: `Ready` when finished, `Failed` (with a message) on failure, otherwise the job pod phase (`Pending`/`Running`). Poll until `Ready` or `Failed`
+- JSON keys: `name`, `status`, `message`
+
+```bash
+orka3 vm get-push-status <JOB_NAME> -n <NS> -o json | jq -r '.[0].status'
+```
+
+### Flush the guest before capturing
+
+The host copies the running VM's disk without flushing the guest, so writes still in the guest page cache can be missing from the image. Run `sync` inside the guest right before `vm push`, `vm save`, or `vm commit`:
+
+```bash
+ssh <VM_USER>@<VM_IP> -p <SSH_PORT> sync
+orka3 vm push <VM> <IMAGE[:TAG]> -n <NS>
+```
+
+The Packer plugin does this automatically.
 
 ## orka3 vm resize
 
@@ -207,7 +263,7 @@ orka3 vm resize <VM_NAME> <NEW_SIZE_GB> [--user <SSH_USER>] [--password <SSH_PAS
 - `-n, --namespace string` - Target namespace
 
 **Architecture Behavior:**
-- **Apple Silicon**: Automatic - no additional steps needed
+- **Apple Silicon**: Requires Orka VM Tools installed in the guest, at a version matching the cluster. With VM Tools present, Orka resizes and repartitions automatically
 - **Intel**: Provide SSH credentials for automatic repartition, or manually complete
 
 **Notes:**
