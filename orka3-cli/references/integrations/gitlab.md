@@ -55,9 +55,9 @@ orka3 sa token <service-account-name> --no-expiration
 | `ORKA_VM_NAME_PREFIX` | No | GitLab CI/CD Variables | VM name prefix, default `gl-runner` |
 | `VM_DEPLOYMENT_ATTEMPTS` | No | GitLab CI/CD Variables | Deploy attempts per job, default `1`. Adds to GitLab's own 3 retries |
 
-**Two scopes:** Variables like `ORKA_ENDPOINT` that are needed at container startup go in the Docker `--env` flag. Variables like `ORKA_TOKEN` that are needed during job execution go in GitLab CI/CD Variables (Settings > CI/CD > Variables). Mark sensitive variables as Masked. Every `ORKA_*` variable except `ORKA_SSH_KEY_FILE` works in either place; if both are set, the container env wins.
+**Two scopes:** Variables like `ORKA_ENDPOINT` that are needed at container startup go in the Docker `--env` flag. Variables like `ORKA_TOKEN` that are needed during job execution go in GitLab CI/CD Variables (Settings > CI/CD > Variables). Mark `ORKA_TOKEN` as Masked. Every `ORKA_*` variable except `ORKA_SSH_KEY_FILE` works in either place; if both are set, the container env wins.
 
-**SSH key:** The scripts read the key only from the GitLab CI/CD variable `ORKA_SSH_KEY_FILE` and write its contents to `~/.ssh/orka_deployment_key`. A key file mounted into the container, or a container env var, is ignored (and the key file at that path is overwritten). Store the private key contents in a masked, protected CI/CD variable named `ORKA_SSH_KEY_FILE` (type Variable).
+**SSH key:** The scripts read the key only from the GitLab CI/CD variable `ORKA_SSH_KEY_FILE` and write its contents to `~/.ssh/orka_deployment_key`. A key file mounted into the container, or a container env var, is ignored (and the key file at that path is overwritten). Store the private key contents in a CI/CD variable named `ORKA_SSH_KEY_FILE` of type Variable (a File-type variable passes a path, not the contents). GitLab can't mask values containing whitespace, so a multi-line key can't be masked: limit who can view CI/CD settings instead.
 
 ## Connectivity
 

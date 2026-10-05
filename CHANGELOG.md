@@ -37,7 +37,7 @@ Folds in verified findings from Robert Elwell's Orka agent playbooks, which were
 - `orka3 namespace list` is admin-only
 - Packer: `packer_push_timeout` isn't in plugin v3.1.2; debug flags are `no_delete_vm`/`no_create_image`
 - GitHub Actions: classic PATs are supported; private keys must be PKCS#1 RSA; `GITHUB_API_URL` is ignored
-- GitLab: the SSH key must be the contents of the `ORKA_SSH_KEY_FILE` CI/CD variable; a mounted key file is ignored
+- GitLab: the SSH key must be the contents of the `ORKA_SSH_KEY_FILE` CI/CD variable; a mounted key file is ignored, and it can't be masked because it's multi-line
 - Removed `grep`, `awk`, and `sort` pipes on CLI output in favor of built-in filtering or `-o json | jq`
 
 ## [1.4.0] - 2026-09-11
