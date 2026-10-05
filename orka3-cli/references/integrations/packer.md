@@ -47,13 +47,20 @@ source "macstadium-orka" "image" {
 | `source_image` | Yes | Base image — CRD name or OCI path |
 | `orka_auth_token` | Yes | Service account token (not user token) |
 | `orka_endpoint` | Yes | Orka API URL, e.g. `http://10.221.188.20` |
-| `image_name` | No | Output image name — CRD name or OCI path; auto-generated if omitted |
+| `image_name` | No | Output image name. Pushed to a registry when it parses as an OCI reference, otherwise saved locally (requires NFS image storage). Default `packer-{{timestamp}}` |
 | `image_description` | No | Plain text description |
 | `image_force_overwrite` | No | Overwrite existing image if it exists |
-| `orka_vm_cpu_core` | No | CPU count for the builder VM |
-| `ssh_username` / `ssh_password` | No | Default `admin`/`admin` on MacStadium base images |
-| `packer_vm_timeout` | No | Minutes to wait for VM launch |
-| `packer_push_timeout` | No | Minutes to wait for OCI push; defaults to 60 |
+| `orka_vm_cpu_core` | No | CPU count for the builder VM, default `3` |
+| `orka_vm_builder_namespace` | No | Namespace for the builder VM, default `orka-default` |
+| `orka_vm_builder_prefix` | No | Builder VM name prefix, default `packer` (VM name `<PREFIX>-<timestamp>`) |
+| `orka_vm_builder_name` | No | Exact builder VM name; overrides the prefix |
+| `orka_vm_tag` | No | Node tag for the builder VM (node affinity, same as `vm deploy --tag`) |
+| `orka_vm_tag_required` | No | Deploy only on nodes with `orka_vm_tag` (same as `--tag-required`) |
+| `ssh_username` / `ssh_password` | No | Default `admin`/`admin` |
+| `ssh_timeout` | No | Wait for SSH, default `5m` |
+| `packer_vm_timeout` | No | Minutes to wait for VM launch, default `10` |
+
+`packer_push_timeout` exists only on the plugin's main branch, not in v3.1.2. v3.1.2 rejects it with `An argument named "packer_push_timeout" is not expected here`. v3.1.2 waits up to 1 hour for a push; the push keeps running server-side after that.
 
 ## Auth
 
@@ -73,10 +80,10 @@ variable "orka_auth_token" {
 
 ## OCI images
 
-`source_image` and `image_name` both accept OCI registry paths. To push the output to an OCI registry, the registry credentials must be configured first:
+`source_image` and `image_name` both accept OCI registry paths. To push the output to an OCI registry, the registry credentials must be configured first, in the builder VM's namespace (`orka_vm_builder_namespace`):
 
 ```bash
-orka3 regcred add https://ghcr.io --username "$REGISTRY_USER" --password "$REGISTRY_TOKEN"
+echo -n "$REGISTRY_TOKEN" | orka3 regcred add https://ghcr.io --username "$REGISTRY_USER" --password-stdin -n <BUILDER_NS>
 ```
 
 Then set `image_name` to the full OCI path:
@@ -85,7 +92,7 @@ Then set `image_name` to the full OCI path:
 image_name = "ghcr.io/your-org/orka-images/custom-sonoma:v1.2"
 ```
 
-Push status is async — check with `orka3 vm get-push-status` if you need to confirm before proceeding.
+The plugin runs `sync` in the guest before creating the image, then waits for the push to finish (up to 1 hour in v3.1.2). If the build times out, check the push with `orka3 vm get-push-status <VM> -n <BUILDER_NS>`.
 
 ## Dev toolkit examples
 
@@ -101,6 +108,6 @@ Bridge networking (introduced in Orka 3.5) is supported by the Packer plugin as 
 
 - **VPN required.** Packer must have network connectivity to the Orka endpoint. If running locally, connect via VPN first.
 - **`packer init` downloads the plugin.** Run `packer init <template>.pkr.hcl` before `packer build`.
-- **`do_not_delete` and `do_not_image`** are dev-only flags. Don't set these in production — the plugin won't clean up the builder VM.
+- **`no_delete_vm` and `no_create_image`** are debug-only flags. Don't set them in production: with `no_delete_vm` the plugin won't clean up the builder VM, and with `no_create_image` no image is produced.
 - **IP mapping:** If Orka node IPs are not directly reachable, set `enable_orka_node_ip_mapping = true` and provide `orka_node_ip_map`.
 - **Intel-only flags:** `orka_enable_net_boost` and `orka_enable_legacy_io` are Intel only. Ignore on Apple Silicon clusters.

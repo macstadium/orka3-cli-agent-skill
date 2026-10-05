@@ -24,6 +24,14 @@ orka3 node list --namespace orka-test
 orka3 node list mini-arm -o wide
 ```
 
+**Notes:**
+- JSON keys: `name`, `ip`, `status` (`READY`/`NOT READY`), `architecture`, `tags`, `allocatableCpu`, `availableCpu`, `allocatableMemory`, `availableMemory`, `runtime`, `version`. Capacity used = allocatable - available
+- A node cordoned in Kubernetes (`SchedulingDisabled`) still shows `READY` with free capacity here, and deploys to it fail with generic errors (see `references/troubleshooting/deployment-issues.md`). Admins with kubectl access can see it in `kubectl get nodes`
+
+```bash
+orka3 node list -o json | jq -r '.[] | "\(.name) \(.allocatableCpu - .availableCpu)/\(.allocatableCpu) CPU used"'
+```
+
 ## orka3 node tag (Admin)
 
 Tag a node for targeted VM deployment (set node affinity).
@@ -79,3 +87,8 @@ orka3 node namespace mini-1 orka-test
 orka3 node namespace mini-1 --namespace orka-test orka-production
 orka3 node namespace mini-1 --namespace orka-production orka-default
 ```
+
+**Notes:**
+- Refused while VMs are running on the node: `cannot move node "<NODE>" to namespace "<NS>" because the node has running VMs. Please remove the VMs before attempting to move the node`. Drain first (wait for or delete the VMs), then move
+- Apple silicon nodes can't be moved into a namespace created with `--enable-custom-pods` (`arm nodes cannot be moved to namespaces with custom pods enabled`)
+- Node tags travel with the node

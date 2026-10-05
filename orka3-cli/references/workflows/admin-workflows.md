@@ -5,6 +5,7 @@ This guide covers namespace management, RBAC configuration, and node organizatio
 ## Contents
 - [Multi-Namespace Team Setup](#multi-namespace-team-setup)
 - [Node Affinity and Tagging Strategy](#node-affinity-and-tagging-strategy)
+- [Node Maintenance (Drain)](#node-maintenance-drain)
 - [Access Control Patterns](#access-control-patterns)
 - [Namespace Lifecycle](#namespace-lifecycle)
 
@@ -45,9 +46,8 @@ orka3 rb add-subject --namespace orka-qa-team \
   --user qa1@company.com,qa2@company.com
 
 # Production (admin only, plus service accounts)
+# A service account automatically has access to the namespace it's created in
 orka3 sa create sa-prod-deploy --namespace orka-prod
-orka3 rb add-subject --namespace orka-prod \
-  --serviceaccount orka-prod:sa-prod-deploy
 
 # 4. Verify setup
 orka3 namespace list
@@ -109,6 +109,26 @@ orka3 node untag mini-m1-3 ci-builds
 orka3 node untag mini-m1-4 ci-builds
 ```
 
+## Node Maintenance (Drain)
+
+Orka refuses to move a node to another namespace while VMs are running on it, so drain the node before moving it. Never move first and wait afterward.
+
+```bash
+# 1. Stop scheduling new work to the node
+#    Remove its tag so tag-required configs stop targeting it, or let queued jobs finish
+orka3 node untag <NODE_NAME> <TAG> --namespace <CURRENT_NAMESPACE>
+
+# 2. Wait for running VMs on the node to finish, or delete them
+orka3 vm list --namespace <CURRENT_NAMESPACE> -o json | \
+  jq -r --arg node "<NODE_NAME>" '.[] | select(.node == $node) | .name'
+orka3 vm delete <VM_NAME> --namespace <CURRENT_NAMESPACE>
+
+# 3. Once no VMs remain on the node, move it
+orka3 node namespace <NODE_NAME> --namespace <CURRENT_NAMESPACE> <TARGET_NAMESPACE>
+```
+
+If VMs are still running, step 3 fails with `cannot move node "<NODE>" to namespace "<NS>" because the node has running VMs. Please remove the VMs before attempting to move the node`. Node tags move with the node.
+
 ## Access Control Patterns
 
 ### Grant User Access
@@ -124,10 +144,8 @@ orka3 rb add-subject --namespace orka-team --user user1@company.com,user2@compan
 ### Grant Service Account Access
 
 ```bash
-# Service account from same namespace
-orka3 rb add-subject --namespace orka-team --serviceaccount orka-team:sa-builds
-
-# Service account from different namespace
+# Service accounts already have access to the namespace they were created in.
+# Bind a service account only into other namespaces:
 orka3 rb add-subject --namespace orka-prod --serviceaccount orka-ci:sa-deploy
 ```
 
@@ -147,9 +165,9 @@ orka3 rb remove-subject --namespace orka-team --serviceaccount orka-ci:sa-deploy
 # List all subjects in namespace
 orka3 rb list-subjects --namespace orka-team
 
-# Filter by type
-orka3 rb list-subjects --namespace orka-team | grep 'User'
-orka3 rb list-subjects --namespace orka-team | grep 'ServiceAccount'
+# Filter by type (kind is User, Group, or ServiceAccount)
+orka3 rb list-subjects --namespace orka-team -o json | jq '.[] | select(.kind=="User")'
+orka3 rb list-subjects --namespace orka-team -o json | jq '.[] | select(.kind=="ServiceAccount")'
 ```
 
 ## Namespace Lifecycle
@@ -178,7 +196,7 @@ orka3 node list --namespace orka-oldteam
 # Clean up VMs
 orka3 vm delete <VM1> <VM2> --namespace orka-oldteam
 
-# Move nodes back to default
+# Move nodes back to default (refused while VMs are still running on them)
 orka3 node namespace mini-arm-1 orka-default --namespace orka-oldteam
 
 # Delete namespace
