@@ -8,6 +8,10 @@ This reference provides detailed syntax and examples for image-related Orka3 CLI
 
 ## Local Image Commands
 
+**Deprecated in Orka 4.0.** NFS-hosted images are deprecated and will be removed in a future release. Every `orka3 image` command prints a deprecation warning to stderr and shows `(Deprecated)` in its help on 4.0. Use OCI images instead, created with `orka3 vm push`, and `orka3 imagecache` to load them onto nodes. `orka3 vm save` and `orka3 vm commit` are deprecated alongside them. The `orka3 imagecache` commands are not affected.
+
+`orka3 image generate`, the `orka3 iso` commands and the `orka3 remote-iso` commands were Intel-only and are removed in Orka 4.0.
+
 ### orka3 image list
 
 List locally stored images in your Orka cluster.

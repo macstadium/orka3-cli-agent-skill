@@ -11,11 +11,11 @@ This reference provides detailed syntax and examples for VM-related Orka3 CLI co
 - [orka3 vm push (Apple Silicon only)](#orka3-vm-push-apple-silicon-only)
 - [orka3 vm get-push-status (Apple Silicon only)](#orka3-vm-get-push-status-apple-silicon-only)
 - [orka3 vm resize](#orka3-vm-resize)
-- [orka3 vm start (Intel only)](#orka3-vm-start-intel-only)
-- [orka3 vm stop (Intel only)](#orka3-vm-stop-intel-only)
-- [orka3 vm suspend (Intel only)](#orka3-vm-suspend-intel-only)
-- [orka3 vm resume (Intel only)](#orka3-vm-resume-intel-only)
-- [orka3 vm revert (Intel only)](#orka3-vm-revert-intel-only)
+- [orka3 vm start (Intel only, removed in Orka 4.0)](#orka3-vm-start-intel-only-removed-in-orka-40)
+- [orka3 vm stop (Intel only, removed in Orka 4.0)](#orka3-vm-stop-intel-only-removed-in-orka-40)
+- [orka3 vm suspend (Intel only, removed in Orka 4.0)](#orka3-vm-suspend-intel-only-removed-in-orka-40)
+- [orka3 vm resume (Intel only, removed in Orka 4.0)](#orka3-vm-resume-intel-only-removed-in-orka-40)
+- [orka3 vm revert (Intel only, removed in Orka 4.0)](#orka3-vm-revert-intel-only-removed-in-orka-40)
 
 ## orka3 vm deploy
 
@@ -42,13 +42,28 @@ orka3 vm deploy [<NAME>] --config <TEMPLATE> [flags]
 - `--timeout int` - Deployment timeout in minutes (default: 10)
 - `-n, --namespace string` - Target namespace
 - `-o, --output string` - Output format: json|wide
+- `--userdata string` - (Orka 4.0+) Bootstrap script to run inside the VM on first boot. Accepts a path to a script file, which the CLI encodes for you, or a base64-encoded string.
 
-**Intel-only Options:**
+**Intel-only Options (removed in Orka 4.0):**
 - `--iso string` - ISO name to attach
 - `--gpu` - Enable GPU passthrough (requires --disable-vnc)
 - `--system-serial string` - Custom serial number
 - `--disable-net-boost` - Disable network performance boost
 - `--disable-vnc` - Disable VNC
+- `--legacy-io` - Legacy IO
+
+Orka 4.0 is Apple Silicon only and removed every flag above. They return an unknown-flag error on 4.0. Orka 3.6 remains the last Intel-supporting release, with Intel support running through March 2028.
+
+**User Data (`--userdata`, Orka 4.0+):**
+- Requires Orka 4.0 or later and orka-vm-tools 3.7.0 or later in the image. All current MacStadium `orka-images` releases qualify.
+- Apple Silicon only. Maximum 64 KiB for the base64-encoded script; for anything larger, use a small script that downloads the rest.
+- Runs as root, in the background, on first boot. The VM becomes available without waiting for it.
+- Runs once per VM. Orka records completion after the script finishes, succeed or fail, so a failed run does not retry on the next boot. If the VM reboots or stops mid-run, the run did not complete and the script runs again, so write scripts that are safe to re-run.
+- No timeout by default. Set `ORKA_USERDATA_TIMEOUT` inside the image to add one.
+- Output goes to `/var/log/orka/userdata.log` inside the VM. Keep credentials out of it, and note that anything printed there travels with an image saved or pushed from that VM.
+- Changing User Data does not re-run the script on VMs that already ran it. Only newly deployed VMs pick up a new value.
+- Check progress with `orka3 vm list -o wide` and the `USERDATA-PHASE` column (`userdataPhase` in API responses): `pending`, `success`, `failed`, `skipped`, `timeout`. An empty value means the VM has no User Data or isn't running. Wait for any of the four terminal phases if automation needs a ready signal.
+- The phase is reported by the guest through VM Tools, so treat it as a progress signal rather than proof the work was done, and don't use it as a security control. Images with VM Tools older than 3.7.0 never report a result, which looks identical to a script still running.
 
 **VM Name Requirements:**
 - Max 63 characters (including generated suffix)
@@ -221,7 +236,7 @@ orka3 vm resize my-vm 100
 orka3 vm resize intel-vm 100 --user admin --password admin
 ```
 
-## orka3 vm start (Intel only)
+## orka3 vm start (Intel only, removed in Orka 4.0)
 
 Power ON a stopped VM.
 
@@ -230,7 +245,7 @@ Power ON a stopped VM.
 orka3 vm start <VM_NAME> [--namespace <NS>] [flags]
 ```
 
-## orka3 vm stop (Intel only)
+## orka3 vm stop (Intel only, removed in Orka 4.0)
 
 Power OFF a running VM.
 
@@ -239,7 +254,7 @@ Power OFF a running VM.
 orka3 vm stop <VM_NAME> [--namespace <NS>] [flags]
 ```
 
-## orka3 vm suspend (Intel only)
+## orka3 vm suspend (Intel only, removed in Orka 4.0)
 
 Suspend a running VM (freezes processes).
 
@@ -248,7 +263,7 @@ Suspend a running VM (freezes processes).
 orka3 vm suspend <VM_NAME> [--namespace <NS>] [flags]
 ```
 
-## orka3 vm resume (Intel only)
+## orka3 vm resume (Intel only, removed in Orka 4.0)
 
 Resume a suspended VM.
 
@@ -257,7 +272,7 @@ Resume a suspended VM.
 orka3 vm resume <VM_NAME> [--namespace <NS>] [flags]
 ```
 
-## orka3 vm revert (Intel only)
+## orka3 vm revert (Intel only, removed in Orka 4.0)
 
 Revert a VM to the latest state of its image.
 

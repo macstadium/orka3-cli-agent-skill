@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - Orka 4.0
+
+Draft. Orka 4.0 had not shipped when this was written; targeted for around 2026-10-28. Verified against `releases/cluster/4.0` and the 4.0 docs PRs (macstadium-docs #390 and #394), not against a released build.
+
+Commands use `orka3`. The proposed `orka3` to `orka` rename (OK-6390) is not implemented in the monorepo and is deliberately not reflected here. If it ships, every example in this skill needs sweeping.
+
+### Added
+
+- `references/commands/emulator-commands.md`: `orka3 emulator-config create`/`list`/`delete` (alias `emc`), plus `--config`, `--device-profile` and `--grpc` on `orka3 emulator deploy`; gRPC endpoint section; `RELAY-IP`/`RELAY-PORT`/`GRPC-PORT` list columns; `PairedVMStopped` and `EmulatorUnschedulable` lifecycle reasons
+- `references/commands/vm-commands.md`: `--userdata` on `orka3 vm deploy` and the `USERDATA-PHASE` column, with the run-once semantics, 64 KiB limit, `ORKA_USERDATA_TIMEOUT`, `/var/log/orka/userdata.log`, and the orka-vm-tools 3.7.0+ requirement
+- `references/commands/admin-commands.md`: `orka3 rbac add-subject`/`list-subjects`/`remove-subject` with `--role admin|dev`, and a mapping table from the deprecated `orka3 rolebinding` commands
+- `SKILL.md`: Essential Context entries for User Data, RBAC subjects, and the 4.0 removals; four new Reference Files rows
+
+### Changed
+
+- Android emulators are GA in Orka 4.0, no longer early access
+- `references/commands/image-commands.md`: NFS-hosted images, `orka3 vm save` and `orka3 vm commit` marked deprecated in 4.0, pointing at `orka3 vm push` and `orka3 imagecache`
+
+### Removed
+
+- Documented the Orka 4.0 removals rather than deleting them, since Orka 3.6 remains the last Intel release and is supported through March 2028: `orka3 vm start|stop|suspend|resume|revert`, `orka3 image generate`, the `orka3 iso` and `orka3 remote-iso` commands, and the `--iso`, `--gpu`, `--system-serial`, `--disable-net-boost` and `--legacy-io` flags
+
+### Fixed
+
+- `references/commands/emulator-commands.md` documented `--device`, `--cpu` and `--memory` on `orka3 emulator deploy`, and a `--vm` filter on `orka3 emulator list`. The CLI has never accepted any of them, including in 3.7.0-alpha. Removed, with a note so they don't get reintroduced.
+- Noted that the CLI's JSON output uses `relayIp` while the API returns `relayIP`. Both are correct for their own surface and should not be normalised to each other.
+
 ## [1.4.0] - 2026-08-24
 
 ### Added

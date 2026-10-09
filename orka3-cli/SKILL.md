@@ -24,7 +24,13 @@ Kubernetes upgrade resilience (v3.6+): Most orka3 commands continue working duri
 
 VM network isolation (v3.6+, Apple Silicon only): MacStadium can configure per-cluster allow/deny rules by CIDR block to restrict VM network access. Configured by support, not via CLI. Contact support@macstadium.com to set up.
 
-Android Emulators (Apple Silicon, 3.7+ early access): `orka3 emulator deploy|list|delete` runs an Android emulator on the same host node as a running macOS VM, connected over an ADB relay. Not GA, not for production. Network isolation is node-level (any VM on the node can reach any emulator on it), NAT only, and ephemeral (no persistent AVD state). See `references/commands/emulator-commands.md`.
+Android Emulators (Apple Silicon, GA in 4.0, early access in 3.7.0-alpha): `orka3 emulator deploy|list|delete` runs an Android emulator on the same host node as a running macOS VM, connected over an ADB relay. Orka 4.0 adds `orka3 emulator-config` (alias `emc`) for reusable templates, plus `--config`, `--device-profile` and `--grpc`. The 4.0 flag set differs from the alpha: there is no `--device`, `--cpu` or `--memory`. Network isolation is node-level (any VM on the node can reach any emulator on it), NAT only, and ephemeral (no persistent AVD state). See `references/commands/emulator-commands.md`.
+
+VM User Data (Orka 4.0+, Apple Silicon only): `orka3 vm deploy --userdata <script|base64>` runs a shell script inside the VM on first boot, as root, in the background, once per VM. Needs orka-vm-tools 3.7.0+ in the image. Track it with the `USERDATA-PHASE` column in `orka3 vm list -o wide`. See `references/commands/vm-commands.md`.
+
+RBAC subjects (Orka 4.0+): `orka3 rbac add-subject|list-subjects|remove-subject --role admin|dev` replaces `orka3 rolebinding`, which is deprecated but still works. See `references/commands/admin-commands.md`.
+
+Removed in Orka 4.0 (Apple Silicon only release): `orka3 vm start|stop|suspend|resume|revert`, `orka3 image generate`, the `orka3 iso` and `orka3 remote-iso` commands, and the `--iso`, `--gpu`, `--system-serial`, `--disable-net-boost` and `--legacy-io` flags. Orka 3.6 is the last Intel release, supported through March 2028.
 
 ## Quick CLI Guide
 
@@ -82,7 +88,7 @@ orka3 imagecache remove <IMAGE> --tags <TAG>
 orka3 imagecache info <IMAGE>              # Check status
 ```
 
-### Android Emulators (Apple Silicon, early access, v3.7.0-alpha+)
+### Android Emulators (Apple Silicon, GA in v4.0, early access in v3.7.0-alpha)
 ```bash
 orka3 emulator deploy --vm <VM>                                 # Defaults: android-36, pixel_9, google_apis
 orka3 emulator deploy --vm <VM> --platform android-35 --device pixel_8
@@ -168,7 +174,10 @@ Most questions are answerable from this file. Load references for full flag deta
 |------------|------|
 | VM flags (deploy/save/commit/push/resize) | `references/commands/vm-commands.md` |
 | Image & imagecache flags | `references/commands/image-commands.md` |
-| Android emulator flags (early access, v3.7.0-alpha+) | `references/commands/emulator-commands.md` |
+| Android emulator and emulator-config flags (GA in v4.0) | `references/commands/emulator-commands.md` |
+| VM User Data, `--userdata`, `USERDATA-PHASE` (v4.0+) | `references/commands/vm-commands.md` |
+| `orka3 rbac` role subjects (v4.0+) | `references/commands/admin-commands.md` |
+| Commands and flags removed in v4.0 (Intel) | `references/commands/vm-commands.md` |
 | Registry credential management | `references/commands/registry-commands.md` |
 | Namespace, SA, rolebinding flags | `references/commands/admin-commands.md` |
 | Node list/tag/namespace flags | `references/commands/node-commands.md` |
