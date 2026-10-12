@@ -30,7 +30,7 @@ orka3 emulator deploy [AVD_NAME] --vm <VM_NAME> (--platform <PLATFORM> --image-t
 
 **Options:**
 - `--vm string` - (Required) Name of the running Orka VM to pair the emulator with
-- `--platform string` - (Required unless `--config` is set) Android platform level, for example `android-36`
+- `--platform string` - (Required unless `--config` is set) Android platform level, as the Android SDK names it, for example `android-35`, `android-36`, `android-37.0`
 - `--image-type string` - (Required unless `--config` is set) System image type, for example `google_apis`
 - `--config string` - (Optional) Name of the emulator configuration to deploy from
 - `--device-profile string` - (Optional) AVD device profile, for example `pixel_8`. If omitted, uses the configuration's profile, or the `avdmanager` default. Set to `""` to force the `avdmanager` default even when the configuration sets one.
@@ -64,7 +64,7 @@ orka3 emulator deploy --vm my-macos-vm --platform android-36 --image-type google
 **Notes:**
 - If you don't provide an `AVD_NAME`, Orka generates a unique name starting with `emu-`. A name already in use fails unless you also pass `--generate-name`.
 - The paired VM must be running. Deploying against a stopped VM fails immediately with the reason `PairedVMStopped`.
-- Platform, device profile, and image type values pass straight through to the Android SDK's `avdmanager`/`sdkmanager` tooling, so any combination those tools support works on a best-effort basis. The only hard constraint is an ARM-native system image, since the emulator runs directly on the Apple Silicon host. Common values: platforms `android-35`/`android-36`; device profiles `pixel_8`/`pixel_9`/`pixel_tablet`; image types `google_apis`/`google_apis_playstore`/`default`.
+- Platform, device profile, and image type values pass straight through to the Android SDK's `avdmanager`/`sdkmanager` tooling, so any combination those tools support works on a best-effort basis. The only hard constraint is an ARM-native system image, since the emulator runs directly on the Apple Silicon host. Common values: platforms `android-35`/`android-36`/`android-37.0` (use the SDK's own name, including a minor version where it has one); device profiles `pixel_8`/`pixel_9`/`pixel_tablet`; image types `google_apis`/`google_apis_playstore`/`default`.
 - Platform, system image, and device profile can't be changed after the emulator is created. Delete it and deploy a new one.
 - Deploy waits until the emulator is running, or until the timeout elapses. A timeout is not necessarily a failure: the emulator may still be `Pending` while its AVD boots. Poll with `orka3 emulator list` until it settles.
 - First deploy on a node may be slow: Android SDK components (roughly 2-4GB per platform and image type pair) download at deploy time if not already cached on the host.
@@ -133,7 +133,7 @@ orka3 emulator-config create <CONFIG_NAME> --platform <PLATFORM> --image-type <I
 ```
 
 **Options:**
-- `--platform string` - (Required) Android platform level, for example `android-36`
+- `--platform string` - (Required) Android platform level, as the Android SDK names it, for example `android-35`, `android-36`, `android-37.0`
 - `--image-type string` - (Required) System image type, for example `google_apis`
 - `--device-profile string` - (Optional) AVD device profile, for example `pixel_8`
 - `--grpc` - (Optional) Emulators deployed from this configuration start the gRPC endpoint
