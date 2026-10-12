@@ -26,7 +26,7 @@ VM network isolation (v3.6+, Apple Silicon only): MacStadium can configure per-c
 
 Android Emulators (Apple Silicon, GA in 4.0, early access in 3.7.0-alpha): `orka3 emulator deploy|list|delete` runs an Android emulator on the same host node as a running macOS VM, connected over an ADB relay. Orka 4.0 adds `orka3 emulator-config` (alias `emc`) for reusable templates, plus `--config`, `--device-profile` and `--grpc`. The 4.0 flag set differs from the alpha: there is no `--device`, `--cpu` or `--memory`. Network isolation is node-level (any VM on the node can reach any emulator on it), NAT only, and ephemeral (no persistent AVD state). See `references/commands/emulator-commands.md`.
 
-VM User Data (Orka 4.0+, Apple Silicon only): `orka3 vm deploy --userdata <script|base64>` runs a shell script inside the VM on first boot, as root, in the background, once per VM. Needs orka-vm-tools 3.7.0+ in the image. Track it with the `USERDATA-PHASE` column in `orka3 vm list -o wide`. See `references/commands/vm-commands.md`.
+VM User Data (Orka 4.0+, Apple Silicon only): `orka3 vm deploy --userdata <script|base64>` runs a shell script inside the VM on first boot, as root, in the background, once per VM. Needs the Orka 4.0 orka-vm-tools in the image. Track it with the `USERDATA-PHASE` column in `orka3 vm list -o wide`. See `references/commands/vm-commands.md`.
 
 RBAC subjects (Orka 4.0+): `orka3 rbac add-subject|list-subjects|remove-subject --role admin|dev` replaces `orka3 rolebinding`, which is deprecated but still works. See `references/commands/admin-commands.md`.
 

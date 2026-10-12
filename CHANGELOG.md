@@ -14,7 +14,7 @@ Commands use `orka3`. The proposed `orka3` to `orka` rename (OK-6390) is not imp
 ### Added
 
 - `references/commands/emulator-commands.md`: `orka3 emulator-config create`/`list`/`delete` (alias `emc`), plus `--config`, `--device-profile` and `--grpc` on `orka3 emulator deploy`; gRPC endpoint section; `RELAY-IP`/`RELAY-PORT`/`GRPC-PORT` list columns; `PairedVMStopped` and `EmulatorUnschedulable` lifecycle reasons
-- `references/commands/vm-commands.md`: `--userdata` on `orka3 vm deploy` and the `USERDATA-PHASE` column, with the run-once semantics, 64 KiB limit, `ORKA_USERDATA_TIMEOUT`, `/var/log/orka/userdata.log`, and the orka-vm-tools 3.7.0+ requirement
+- `references/commands/vm-commands.md`: `--userdata` on `orka3 vm deploy` and the `USERDATA-PHASE` column, with the run-once semantics, 64 KiB limit, `ORKA_USERDATA_TIMEOUT`, `/var/log/orka/userdata.log`, and the Orka 4.0 orka-vm-tools requirement
 - `references/commands/admin-commands.md`: `orka3 rbac add-subject`/`list-subjects`/`remove-subject` with `--role admin|dev`, and a mapping table from the deprecated `orka3 rolebinding` commands
 - `SKILL.md`: Essential Context entries for User Data, RBAC subjects, and the 4.0 removals; four new Reference Files rows
 

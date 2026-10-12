@@ -55,7 +55,7 @@ orka3 vm deploy [<NAME>] --config <TEMPLATE> [flags]
 Orka 4.0 is Apple Silicon only and removed every flag above. They return an unknown-flag error on 4.0. Orka 3.6 remains the last Intel-supporting release, with Intel support running through March 2028.
 
 **User Data (`--userdata`, Orka 4.0+):**
-- Requires Orka 4.0 or later and orka-vm-tools 3.7.0 or later in the image. All current MacStadium `orka-images` releases qualify.
+- Requires Orka 4.0 or later and the Orka 4.0 orka-vm-tools in the image, which ship with this release.
 - Apple Silicon only. Maximum 64 KiB for the base64-encoded script; for anything larger, use a small script that downloads the rest.
 - Runs as root, in the background, on first boot. The VM becomes available without waiting for it.
 - Runs once per VM. Orka records completion after the script finishes, succeed or fail, so a failed run does not retry on the next boot. If the VM reboots or stops mid-run, the run did not complete and the script runs again, so write scripts that are safe to re-run.
@@ -63,7 +63,7 @@ Orka 4.0 is Apple Silicon only and removed every flag above. They return an unkn
 - Output goes to `/var/log/orka/userdata.log` inside the VM. Keep credentials out of it, and note that anything printed there travels with an image saved or pushed from that VM.
 - Changing User Data does not re-run the script on VMs that already ran it. Only newly deployed VMs pick up a new value.
 - Check progress with `orka3 vm list -o wide` and the `USERDATA-PHASE` column (`userdataPhase` in API responses): `pending`, `success`, `failed`, `skipped`, `timeout`. An empty value means the VM has no User Data or isn't running. Wait for any of the four terminal phases if automation needs a ready signal.
-- The phase is reported by the guest through VM Tools, so treat it as a progress signal rather than proof the work was done, and don't use it as a security control. Images with VM Tools older than 3.7.0 never report a result, which looks identical to a script still running.
+- The phase is reported by the guest through VM Tools, so treat it as a progress signal rather than proof the work was done, and don't use it as a security control. Images with older VM Tools never report a result, which looks identical to a script still running.
 
 **VM Name Requirements:**
 - Max 63 characters (including generated suffix)
