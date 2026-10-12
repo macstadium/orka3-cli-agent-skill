@@ -5,7 +5,8 @@ This reference provides detailed syntax and examples for administrative Orka3 CL
 ## Contents
 - [Namespace Commands](#namespace-commands)
 - [Service Account Commands](#service-account-commands)
-- [RBAC Commands (Rolebinding)](#rbac-commands-rolebinding)
+- [RBAC Commands (orka3 rbac, Orka 4.0+)](#rbac-commands-orka3-rbac-orka-40)
+- [RBAC Commands (Rolebinding, deprecated in Orka 4.0)](#rbac-commands-rolebinding-deprecated-in-orka-40)
 
 ## Namespace Commands
 
@@ -136,7 +137,76 @@ orka3 serviceaccount delete <NAME> [<NAME2> ...] [--namespace <NS>] [flags]
 
 **CAUTION:** Deleting a service account invalidates all associated tokens.
 
-## RBAC Commands (Rolebinding)
+## RBAC Commands (orka3 rbac, Orka 4.0+)
+
+Requires Orka 4.0 or later. On earlier versions use the `orka3 rolebinding` commands below, which are deprecated as of 4.0 but still work.
+
+Every `orka3 rbac` command requires administrative privileges and a `--role`:
+
+- `--role dev` modifies the `orka-dev` rolebinding in a single namespace. Use `--namespace` to choose it; defaults to your default namespace.
+- `--role admin` is cluster-wide. Subjects are added to or removed from every rolebinding and cluster rolebinding granting the admin role to its OIDC group, so `--namespace` is not valid with `--role admin`.
+
+### orka3 rbac add-subject
+
+Grant a role to one or more users and/or service accounts.
+
+**Syntax:**
+```bash
+orka3 rbac add-subject --role admin|dev [--namespace <NS>] --user <EMAIL>[,<EMAIL2>,...] AND/OR --serviceaccount <SA_NS>:<SA_NAME>[,...] [flags]
+```
+
+**Options:**
+- `-r, --role string` - The role to grant: `admin` or `dev`
+- `-n, --namespace string` - (Optional) With `--role dev`, the namespace whose `orka-dev` rolebinding is modified. Not valid with `--role admin`.
+- `-u, --user strings` - Users (email addresses, comma-separated)
+- `-s, --serviceaccount strings` - Service accounts (`NAMESPACE:SERVICE_ACCOUNT`, comma-separated)
+
+**Examples:**
+```bash
+orka3 rbac add-subject --role admin --serviceaccount orka-default:sa-jenkins
+orka3 rbac add-subject --role admin --user user@company.com
+orka3 rbac add-subject --role dev --namespace orka-test --user user@company.com
+orka3 rbac add-subject --role admin --user user1@company.com,user2@company.com --serviceaccount orka-default:sa-jenkins
+```
+
+**Notes:**
+- Admin grants apply only to the admin bindings that exist at grant time. Bindings created later, for example when you create a namespace, start without the granted subjects. Re-run after creating namespaces. Safe to run more than once.
+
+### orka3 rbac list-subjects
+
+List the subjects currently granted a role. With `--role admin`, the list combines subjects from every binding granting the admin role, without duplicates.
+
+**Syntax:**
+```bash
+orka3 rbac list-subjects --role admin|dev [--namespace <NS>] [--output wide|json] [flags]
+```
+
+**Examples:**
+```bash
+orka3 rbac list-subjects --role admin
+orka3 rbac list-subjects --role dev --namespace orka-test
+```
+
+### orka3 rbac remove-subject
+
+Revoke a role from one or more users and/or service accounts. Same flags as `add-subject`.
+
+**Examples:**
+```bash
+orka3 rbac remove-subject --role admin --user user@company.com
+orka3 rbac remove-subject --role dev --namespace orka-test --serviceaccount orka-default:sa-jenkins
+```
+
+## RBAC Commands (Rolebinding, deprecated in Orka 4.0)
+
+Deprecated as of Orka 4.0 in favour of `orka3 rbac ... --role dev`. They still work and behave the same. The `/api/v1/namespaces/{namespace}/rolebindings/orka-dev/subjects` routes are deprecated alongside them, replaced by `/api/v1/rbac`.
+
+| Deprecated | Replacement |
+|---|---|
+| `orka3 rolebinding add-subject` | `orka3 rbac add-subject --role dev` |
+| `orka3 rolebinding list-subjects` | `orka3 rbac list-subjects --role dev` |
+| `orka3 rolebinding remove-subject` | `orka3 rbac remove-subject --role dev` |
+
 
 ### orka3 rolebinding add-subject (alias: rb)
 
