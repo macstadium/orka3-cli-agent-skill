@@ -13,6 +13,7 @@ Current version: `2.10` (2026-06-04). Orka 3.x requires plugin 2.0+. On Orka 2.x
 - [Retention strategies](#retention-strategies)
 - [Permanent agents](#permanent-agents)
 - [Logging](#logging)
+- [Orka 4.0](#orka-40)
 - [Gotchas](#gotchas)
 
 ## What it does
@@ -60,7 +61,7 @@ Use **Test Connection** to check the endpoint and token. Then click **Add Orka T
 
 With **Orka 3.x Deployment** selected, choose one input mode:
 
-- **Specify values directly:** Image, # of CPUs (default `2`), Memory in G (default `auto`, calculated from CPUs), Tag, Tag Required, Scheduler, plus under Advanced the Intel-only Use Net Boost, Use Legacy IO, and Use GPU Passthrough (GPU must be enabled for the cluster), and Display Settings (width, height, DPI).
+- **Specify values directly:** Image (an image name from cluster storage, such as `sequoia-90gb-orka3-arm`, or an OCI reference, such as `ghcr.io/macstadium/orka-images/sequoia:latest`), # of CPUs (default `2`), Memory in G (default `auto`, calculated from CPUs), Tag, Tag Required, Scheduler, plus under Advanced the Intel-only Use Net Boost, Use Legacy IO, and Use GPU Passthrough (GPU must be enabled for the cluster), and Display Settings (width, height, DPI).
 - **Use a VM Config:** select an existing Orka VM config. All VM parameters come from the config, so you can change them in Orka without touching Jenkins.
 
 Common fields:
@@ -87,6 +88,20 @@ Templates migrated from Orka 2.x show an **Orka 2.x Deployment** option that is 
 
 Manage Jenkins > Nodes and Clouds > New Node > **Agent running under Orka by MacStadium**. Fields: Orka Token, Orka Endpoint, Namespace, Node (the Orka node to deploy on), Public Host (optional, from MacStadium), Image, # of CPUs, Memory, Tag, Tag Required, the Intel-only options, VM Credentials, Name Prefix. The VM stays up until you delete the agent.
 
+## Orka 4.0
+
+Orka 4.0 rejects requests that ask for Intel-only behavior, including `netBoost: false`. Plugin 2.10 sends the Use Net Boost checkbox as-is, so when it's unchecked, every deploy sends `netBoost: false` and fails with:
+
+```
+disabling netBoost is not supported as of Orka 4.0, which no longer supports Intel VMs
+```
+
+- **Specify values directly:** check **Use Net Boost** under Advanced. That sends `netBoost: true`, which Orka 4.0 accepts. Leave Use Legacy IO and Use GPU Passthrough unchecked.
+- **Use a VM Config:** the checkbox isn't shown in this mode, but the plugin still sends `netBoost`, so these templates fail on 4.0. Until a plugin release stops sending the field, use Specify values directly with Use Net Boost checked.
+- **Permanent agents** send the same field. Check Use Net Boost on the agent.
+
+This is from reading the plugin 2.10 source and the Orka 4.0 API validation. It hasn't been tested against a live 4.0 cluster yet.
+
 ## Logging
 
 Manage Jenkins > System Log > Add new log recorder > Loggers > Add:
@@ -103,5 +118,5 @@ Set the level to **All**. This is verbose and can slow a busy controller. For li
 - **Set Max Jenkins Agents Limit.** Left empty there is no limit, and jobs beyond slot capacity fail at deploy instead of waiting in the queue.
 - **First Apple silicon deploy is slow.** The first boot of an uncached image on an Apple silicon node takes minutes. Raise the agent connection timeout before the first deploy.
 - **"Terminate immediately after use" needs one executor.** More than one executor defeats the one-job-per-VM model.
-- **Intel-only options.** Net Boost, Legacy IO, and GPU Passthrough apply only to Intel nodes. Ignore them on Apple silicon.
+- **Intel-only options.** Legacy IO and GPU Passthrough apply only to Intel nodes; leave them unchecked. On Orka 4.0, Use Net Boost must be checked. See [Orka 4.0](#orka-40).
 - **VPN or site-to-site connection required.** The controller initiates the API calls and the SSH connection, so it must reach both the Orka endpoint and the node IPs (or mapped public hosts).
