@@ -90,17 +90,9 @@ Manage Jenkins > Nodes and Clouds > New Node > **Agent running under Orka by Mac
 
 ## Orka 4.0
 
-Orka 4.0 rejects requests that ask for Intel-only behavior, including `netBoost: false`. Plugin 2.10 sends the Use Net Boost checkbox as-is, so when it's unchecked, every deploy sends `netBoost: false` and fails with:
+Plugin 2.10 works with Orka 4.0. The plugin sends the Use Net Boost checkbox on every deploy, so an unchecked box sends `"netBoost": false`. Orka 4.0 accepts that and sets net boost on, as 3.6 did for Apple silicon (OK-6467). Leave Use Legacy IO and Use GPU Passthrough unchecked: 4.0 rejects both when they're turned on.
 
-```
-disabling netBoost is not supported as of Orka 4.0, which no longer supports Intel VMs
-```
-
-- **Specify values directly:** check **Use Net Boost** under Advanced. That sends `netBoost: true`, which Orka 4.0 accepts. Leave Use Legacy IO and Use GPU Passthrough unchecked.
-- **Use a VM Config:** the checkbox isn't shown in this mode, but the plugin still sends `netBoost`, so these templates fail on 4.0. Until a plugin release stops sending the field, use Specify values directly with Use Net Boost checked.
-- **Permanent agents** send the same field. Check Use Net Boost on the agent.
-
-This is from reading the plugin 2.10 source and the Orka 4.0 API validation. It hasn't been tested against a live 4.0 cluster yet.
+An early 4.0 build rejected `netBoost: false` with `disabling netBoost is not supported as of Orka 4.0, which no longer supports Intel VMs`. If a cluster returns that error, it's running that build. Checking **Use Net Boost** works around it in "Specify values directly" mode.
 
 ## Logging
 
@@ -118,5 +110,5 @@ Set the level to **All**. This is verbose and can slow a busy controller. For li
 - **Set Max Jenkins Agents Limit.** Left empty there is no limit, and jobs beyond slot capacity fail at deploy instead of waiting in the queue.
 - **First Apple silicon deploy is slow.** The first boot of an uncached image on an Apple silicon node takes minutes. Raise the agent connection timeout before the first deploy.
 - **"Terminate immediately after use" needs one executor.** More than one executor defeats the one-job-per-VM model.
-- **Intel-only options.** Legacy IO and GPU Passthrough apply only to Intel nodes; leave them unchecked. On Orka 4.0, Use Net Boost must be checked. See [Orka 4.0](#orka-40).
+- **Intel-only options.** Net Boost, Legacy IO, and GPU Passthrough apply only to Intel nodes. Leave Legacy IO and GPU Passthrough unchecked; Orka 4.0 rejects them. See [Orka 4.0](#orka-40).
 - **VPN or site-to-site connection required.** The controller initiates the API calls and the SSH connection, so it must reach both the Orka endpoint and the node IPs (or mapped public hosts).
