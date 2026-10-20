@@ -92,8 +92,6 @@ Manage Jenkins > Nodes and Clouds > New Node > **Agent running under Orka by Mac
 
 Plugin 2.10 works with Orka 4.0. The plugin sends the Use Net Boost checkbox on every deploy, so an unchecked box sends `"netBoost": false`. Orka 4.0 accepts that and sets net boost on, as 3.6 did for Apple silicon (OK-6467). Leave Use Legacy IO and Use GPU Passthrough unchecked: 4.0 rejects both when they're turned on.
 
-An early 4.0 build rejected `netBoost: false` with `disabling netBoost is not supported as of Orka 4.0, which no longer supports Intel VMs`. If a cluster returns that error, it's running that build. Checking **Use Net Boost** works around it in "Specify values directly" mode.
-
 ## Logging
 
 Manage Jenkins > System Log > Add new log recorder > Loggers > Add:
