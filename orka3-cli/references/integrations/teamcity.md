@@ -42,12 +42,12 @@ The base image must have:
 
 ```bash
 # On the VM, after agent syncs and you've stopped it:
-orka3 vm save <vm-name> <base-image-name>
+orka3 vm save <VM_NAME> <NEW_IMAGE_NAME>
 # or commit:
-orka3 vm commit <vm-name>
+orka3 vm commit <VM_NAME>
 
 # Create a VM config from the image:
-orka3 vmc create <config-name> --image <base-image-name>
+orka3 vmc create <VM_CONFIGURATION_NAME> --image <NEW_IMAGE_NAME>
 ```
 
 **4. Configure a cloud profile:** see below.

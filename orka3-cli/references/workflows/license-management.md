@@ -32,7 +32,7 @@ Each Orka node consumes a concurrent seat. To release a seat from a decommission
 On AWS, you can override a node's license key via Ansible without a full upgrade:
 ```bash
 ansible-playbook -i arm.ssh.aws_ec2.yml configure-arm.yml \
-  --private-key ~/.ssh/id_rsa -e override_orka_engine_license_key=<new-key>
+  --private-key ~/.ssh/id_rsa -e override_orka_engine_license_key=<LICENSE_KEY>
 ```
 
 ## Automated Notifications

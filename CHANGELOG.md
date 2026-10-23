@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 1.6.0
+
+Ports Orka 3.x documentation changes from docs.macstadium.com (September to October 2026). Version tables, compatibility data, and known-issue lists are summarized with a link to the docs page instead of copied in full.
+
+### Added
+
+- `upgrade-workflows.md`: "Checking component versions" (`orka3 version` fields, `orka3 node list -o wide` `VERSION`/`RUNTIME`, `--client`, patch releases only bump changed components, link to the component matrix) and the on-prem `orka-ansible-onprem:3.6.4` installer re-pull note
+- `image-workflows.md`: "macOS Guest Compatibility" summary (macOS 27 Golden Gate needs a 26.6.2+ host and more than 2 GB of RAM, macOS 27 isn't signed off as a host OS, `latest` on MacStadium images means latest published), hardened image tagging and pre-caching, VM Tools needs macOS 13+
+- `image-issues.md`: known issue for in-place macOS 15.x and 26.x upgrades inside a VM, with the memory check and the installer workaround
+- `admin-commands.md`, `auth-issues.md`: hosted-cluster admin limits and the managed `orka-admin` service account (`orka3 sa token orka-admin`)
+- `migration-workflows.md`: NFS-to-OCI migration with Harbor, including CI/CD repointing
+- `scaling-workflows.md`: node disk sizing from maximum provisioned size, and where to check storage usage
+- `config-commands.md`: `config set --api-url` doesn't change the kubeconfig `server` entry; `orka3 version` output fields and `--client`
+- `rest-api.md`: Android emulator REST endpoints (3.7.0-alpha)
+- `emulator-commands.md`: `google_apis_playstore` images reject ADB (`device unauthorized`)
+- `SKILL.md`: Essential Context bullets for component versions and macOS guest rules; reference table entries updated
+
+### Changed
+
+- Placeholders in command examples are `<UPPER_SNAKE>` matching orka3 help (for example `<SERVICE_ACCOUNT_NAME>`, `<VM_CONFIGURATION_NAME>`, `<ORKA_API_URL>`)
+- "IP plan" references now say My Cloud
+
+### Fixed
+
+- `image-commands.md`: removed the `orka3 image list --arch amd64` example; `image list` has no `--arch` flag (drift check, skill PR #19)
+- `emulator-commands.md`: the device-profile example no longer uses a Play Store image
+
 ## [1.5.0] - 2026-10-06
 
 Folds in verified findings from Robert Elwell's Orka agent playbooks, which were tested against a live Orka 3.6.3 cluster. Every item was checked against the Orka 3.6 CLI help, the Orka source, the public docs, or the integration repos before inclusion.

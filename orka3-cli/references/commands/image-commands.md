@@ -25,7 +25,6 @@ orka3 image list [<NAME>] [--output <FORMAT>] [flags]
 orka3 image list
 orka3 image list sonoma-90gb-orka3-arm
 orka3 image list --output json
-orka3 image list --arch amd64
 ```
 
 **Notes:**

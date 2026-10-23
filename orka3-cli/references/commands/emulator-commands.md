@@ -23,7 +23,7 @@ orka3 emulator deploy [<AVD_NAME>] --vm <VM> --platform <PLATFORM> --image-type 
 **Options:**
 - `--vm string` - Name of the running macOS VM to pair the emulator with (required)
 - `--platform string` - Android platform level, e.g. `android-35`, `android-36` (required, no default)
-- `--image-type string` - System image type, e.g. `google_apis`, `google_apis_playstore`, `default` (required, no default)
+- `--image-type string` - System image type, e.g. `google_apis`, `google_apis_playstore`, `default` (required, no default). ADB doesn't work with `google_apis_playstore` yet; use `google_apis` or `default`
 - `--device-profile string` - AVD device profile, e.g. `pixel_8`, `pixel_9`, `pixel_tablet` (optional; `avdmanager` default if omitted)
 - `--generate-name` - Generate a unique name starting with `AVD_NAME`
 - `--timeout int` - Minutes to wait for the deploy to complete (default: `5`)
@@ -34,7 +34,7 @@ orka3 emulator deploy [<AVD_NAME>] --vm <VM> --platform <PLATFORM> --image-type 
 ```bash
 orka3 emulator deploy --vm my-macos-vm --platform android-36 --image-type google_apis
 orka3 emulator deploy my-emulator --vm my-macos-vm --platform android-36 --image-type google_apis --generate-name
-orka3 emulator deploy --vm my-macos-vm --platform android-35 --image-type google_apis_playstore --device-profile pixel_8
+orka3 emulator deploy --vm my-macos-vm --platform android-35 --image-type google_apis --device-profile pixel_8
 orka3 emulator deploy --vm my-macos-vm --platform android-36 --image-type google_apis --timeout 10 -o json
 ```
 
@@ -102,10 +102,11 @@ adb connect <RELAY_IP>:<RELAY_PORT>                                             
 adb devices
 ```
 
-Standard ADB operations work once connected: `adb install`, `adb shell`, `adb pull`, `adb push`. The relay IP is currently the host's NAT gateway address (`192.168.64.1`), but treat the listed relay IP and port as opaque values rather than hardcoding them.
+Standard ADB operations work once connected (`adb install`, `adb shell`, `adb pull`, `adb push`) on `google_apis` and `default` images, not `google_apis_playstore`. The relay IP is currently the host's NAT gateway address (`192.168.64.1`), but treat the listed relay IP and port as opaque values rather than hardcoding them.
 
 ## Known Limitations
 
+- **Play Store images reject ADB.** With `--image-type google_apis_playstore`, the emulator reaches `Running` and gets a relay port, but every `adb` command from the VM fails with `device unauthorized`. Play Store images require each ADB key to be approved on the device, and Orka emulators are headless. No workaround; use `google_apis`, which includes Google Play services (FCM, Maps, Sign-In, Location, ML Kit). It lacks the Play Store app and Play certification, so Play Store install/update flows, Play Billing, and install referrer can't be tested, and Play Integrity checks behave differently. A fix is in progress.
 - **Node-level network isolation only.** Relay ports are reachable by any VM running on the same physical node, not just the VM the emulator is attached to. Emulators are unreachable from VMs on other nodes. Per-VM isolation is planned for a future release.
 - **NAT only.** Bridged networking is not supported: the ADB relay requires the host's NAT network, so emulators are only available on NAT-networked VMs.
 - **Ephemeral.** No persistent AVD state between deploys; each deploy creates a fresh emulator. No support yet for packaging custom AVD configurations as Orka images.

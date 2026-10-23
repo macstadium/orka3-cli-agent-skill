@@ -15,7 +15,7 @@ This guide covers collecting Orka metrics with Prometheus and the alerts that ma
 | Source | Endpoint | Notes |
 |--------|----------|-------|
 | Orka server (API) | `http://<ORKA_LB_IP>/api/v1/metrics` | Go runtime and process metrics only (`go_goroutines`, `process_resident_memory_bytes`). The path is `/api/v1/metrics`, not `/metrics`. Mostly relevant if you use integrations that still rely on the legacy API server |
-| Orka operator | `http://<ORKA_LB_IP>:8080/metrics` | VM lifecycle metrics. `<ORKA_LB_IP>` is usually `10.221.188.20` or `10.221.188.100`; check your IP plan |
+| Orka operator | `http://<ORKA_LB_IP>:8080/metrics` | VM lifecycle metrics. `<ORKA_LB_IP>` is usually `10.221.188.20` or `10.221.188.100`; check the IP Allocation table in My Cloud (MacStadium Portal) |
 | Node exporter | `http://<NODE_IP>:9100/metrics` | Runs on every node, Intel, Apple silicon, and control plane. Mac nodes run the Homebrew darwin build of `node_exporter` |
 | GitHub Actions integration | `http://<GHA_RUNNER_HOST>:8080/metrics` | Opt-in with `ENABLE_METRICS=true`. See [github-actions.md](../integrations/github-actions.md#metrics) |
 | Harbor registry (3.5+) | Ask MacStadium support | Clusters using Harbor OCI storage |

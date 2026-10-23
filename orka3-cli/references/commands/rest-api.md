@@ -9,6 +9,7 @@ This reference covers calling the Orka API server directly, for tools that can't
 - [Response Shapes](#response-shapes)
 - [Request Bodies](#request-bodies)
 - [Push Status](#push-status)
+- [Android Emulators (3.7.0-alpha, early access)](#android-emulators-370-alpha-early-access)
 
 ## Swagger UI
 
@@ -29,7 +30,7 @@ curl <ORKA_API_URL>/api/v1/cluster-info
 There is no login endpoint. Get a token from the CLI and pass it as a bearer token:
 
 ```bash
-orka3 sa token <SA>                       # Automation and CI/CD (service account)
+orka3 sa token <SERVICE_ACCOUNT_NAME>     # Automation and CI/CD (service account)
 orka3 user get-token                      # Interactive use only (expires in 1 hour)
 ```
 
@@ -113,3 +114,26 @@ orka3 vm get-push-status <JOB_NAME> -n <NS>
 ```
 
 See `vm-commands.md` for status values.
+
+## Android Emulators (3.7.0-alpha, early access)
+
+Apple silicon only. Same base path (`/api/v1/namespaces/{namespace}`), bearer auth, and RBAC as VMs. Source: [Android emulators on Orka](https://docs.macstadium.com/orka/orka-resources/android-emulators).
+
+| Operation | Method and path |
+|-----------|-----------------|
+| Deploy an emulator on a running VM | `POST /api/v1/namespaces/{namespace}/emulators/android` |
+| List emulators (optional `?vm=<VM_NAME>` filter) | `GET /api/v1/namespaces/{namespace}/emulators/android` |
+| Get one emulator | `GET /api/v1/namespaces/{namespace}/emulators/android/{emulator}` |
+| Delete an emulator | `DELETE /api/v1/namespaces/{namespace}/emulators/android/{emulator}` |
+
+**Deploy body:** `vmName`, `platform`, and `imageType` are required. Optional: `deviceProfile` (`avdmanager` default if omitted), `name` (generated, starting `emu-`, if omitted), `shouldGenerateName` (bool, appends a random suffix to `name`), `timeout` (minutes, default 10).
+
+```json
+{"vmName": "my-macos-vm", "platform": "android-36", "imageType": "google_apis", "deviceProfile": "pixel_9"}
+```
+
+Deploy blocks until the emulator reaches `Running` or `Failed`, or the timeout passes. On `Failed`, Orka deletes the emulator and returns `500` with the failure message. On timeout it returns `500` but does not delete the emulator: `GET` it to see whether it reached `Running`.
+
+**Responses:** deploy returns `name`, `status`, `nodeName`, `relayIP`, `relayPort`. `GET` returns one emulator with those fields plus `vmName`, `platform`, `imageType`, `deviceProfile`; list wraps them in `{"items": [...]}`. `errorMessage` appears only when `status` is `Failed`. `DELETE` returns `200` with no body. Note the REST key is `relayIP`, while CLI JSON uses `relayIp`.
+
+**Errors:** `400` missing `vmName`, `platform`, or `imageType`; `403` RBAC; `404` emulator not found; `409` an emulator with that name already exists; `500` deploy failed or timed out, or an unexpected error.

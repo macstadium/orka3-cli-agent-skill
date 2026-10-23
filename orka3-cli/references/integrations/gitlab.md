@@ -18,7 +18,7 @@ The Custom executor runs each CI/CD job inside a fresh Orka VM, then deletes it 
 
 **Setup summary:**
 1. Create a base image with SSH enabled (private key, no passphrase) and the `gitlab-runner` binary installed. Without the binary, cache and artifacts are disabled (job log: `Missing gitlab-runner. Extracting cache is disabled.`)
-2. Create a VM config from that image: `orka3 vmc create <name> --image <image>`
+2. Create a VM config from that image: `orka3 vmc create <VM_CONFIGURATION_NAME> --image <IMAGE_NAME>`
 3. Build and run the Docker container from the [Dockerfile](https://github.com/macstadium/orka-integrations/blob/master/GitLab/Dockerfile)
 4. Register the runner inside the container using `TOKEN=${REGISTRATION_TOKEN}`
 5. Set `concurrent` (and per-runner `limit`) in `config.toml` at or below VM slot capacity (2 x Apple silicon nodes in the target namespace). The template ships with `concurrent = 1`.
@@ -32,13 +32,13 @@ The Shell executor runs jobs directly on the machine where the GitLab Runner is 
 Use a service account token for `ORKA_TOKEN`. User tokens expire in 1 hour and will not work reliably in CI/CD.
 
 ```bash
-orka3 sa token <service-account-name>
+orka3 sa token <SERVICE_ACCOUNT_NAME>
 ```
 
 Where the control plane caps token lifetime (EKS), use a non-expiring token:
 
 ```bash
-orka3 sa token <service-account-name> --no-expiration
+orka3 sa token <SERVICE_ACCOUNT_NAME> --no-expiration
 ```
 
 **Note:** The custom-executor.md doc lists `orka3 user get-token` as an option. That is wrong for CI/CD. Service account tokens only.
@@ -81,8 +81,8 @@ If Orka node IPs are private and the runner connects over a public IP, configure
 - **Failed VMs are auto-deleted by the runner.** To debug SSH issues, deploy a VM manually: `orka3 vm deploy test-debug --config $ORKA_CONFIG_NAME -o json`, troubleshoot, then `orka3 vm delete test-debug`.
 - **SSH key must have no passphrase.** The runner cannot handle passphrase-protected keys.
 - **ORKA_ENDPOINT must include the protocol and no trailing slash.** `http://10.221.188.20` is correct; `10.221.188.20` and `http://10.221.188.20/` are not.
-- **Don't use grep or pipes for CLI output.** Use `orka3 vmc list <name>` to check if a config exists.
-- **VM config must exist before the runner starts.** Create it with `orka3 vmc create <name> --image <image> --cpu <n>`.
+- **Don't use grep or pipes for CLI output.** Use `orka3 vmc list <VM_CONFIGURATION_NAME>` to check if a config exists.
+- **VM config must exist before the runner starts.** Create it with `orka3 vmc create <VM_CONFIGURATION_NAME> --image <IMAGE_NAME> --cpu <CPU>`.
 - **Failures exit with `$SYSTEM_FAILURE_EXIT_CODE`.** Deploy, IP, and SSH failures in the prepare stage are reported to GitLab as system failures, not build failures.
 - **Debug:** run the runner with `gitlab-runner --debug run`.
 - **Integration error strings** (`Invalid ip`, `Waited 30 seconds for sshd to start`, and others) are covered in the integration's [troubleshooting.md](https://github.com/macstadium/orka-integrations/blob/master/GitLab/troubleshooting.md). Point users there instead of restating them.

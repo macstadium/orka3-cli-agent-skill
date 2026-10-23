@@ -44,13 +44,13 @@ Add the following to your EC2 Mac instance user data script:
 ```bash
 #!/bin/bash
 export VM_SHARED_DISK_SIZE=500
-/usr/local/bin/bootstrap-orka <eks-cluster-name> <aws-region> <orka-engine-license-key>
+/usr/local/bin/bootstrap-orka <EKS_CLUSTER_NAME> <AWS_REGION> <ORKA_ENGINE_LICENSE_KEY>
 ```
 
 Replace:
-- `<eks-cluster-name>` with your EKS cluster name
-- `<aws-region>` with your AWS region (e.g., `us-east-1`)
-- `<orka-engine-license-key>` with your Orka license key
+- `<EKS_CLUSTER_NAME>` with your EKS cluster name
+- `<AWS_REGION>` with your AWS region (e.g., `us-east-1`)
+- `<ORKA_ENGINE_LICENSE_KEY>` with your Orka license key
 - `500` with your desired disk size in GB
 
 ### Verification
@@ -113,7 +113,7 @@ diskutil list internal physical
 # Look for an unformatted disk (no partition scheme) — note its identifier (e.g., disk1)
 
 # 3. Format the disk (JHFS+ for macOS compatibility)
-diskutil eraseDisk -noEFI JHFS+ shared /dev/<disk-identifier>
+diskutil eraseDisk -noEFI JHFS+ shared /dev/<DISK_IDENTIFIER>
 
 # 4. Verify mount
 ls /Volumes/shared

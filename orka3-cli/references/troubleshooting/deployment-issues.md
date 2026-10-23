@@ -185,7 +185,7 @@ orka3 vm deploy --image <VERIFIED_IMAGE>  # Use known-good image
 **Symptoms:**
 - `Failed to pull image due to image not found, is the name correct?` (OCI images)
 - `Failed to pull image due to being unauthorized (on some OCI registries/providers this may also mean image not found).`
-- "Image <n> not found" (local images)
+- "Image <IMAGE_NAME> not found" (local images)
 
 **Diagnosis:**
 ```bash
@@ -217,7 +217,7 @@ orka3 ic info <OCI_IMAGE>  # Wait for 'Ready' status
 ## Problem: VM name already exists
 
 **Symptoms:**
-- "VM with name <n> already exists"
+- "VM with name <VM_NAME> already exists"
 - Name conflict error
 
 **Solutions:**

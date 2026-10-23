@@ -8,6 +8,7 @@ This guide covers custom image preparation, caching, and OCI registry integratio
 - [OCI Registry Integration Workflow](#oci-registry-integration-workflow)
 - [VM save vs. VM commit](#vm-save-vs-vm-commit)
 - [Image Versioning and Promotion](#image-versioning-and-promotion)
+- [macOS Guest Compatibility (Apple Silicon)](#macos-guest-compatibility-apple-silicon)
 - [Apple Silicon Image Known Issues](#apple-silicon-image-known-issues)
 - [Image Management Best Practices](#image-management-best-practices)
 
@@ -160,11 +161,26 @@ orka3 ic add ghcr.io/your-org/orka-images/custom-sonoma:v1.3 --all
 - Use channel tags (for example `:stable`) to mark which version is promoted.
 - Promote and roll back by repointing the VM config CI uses at a version tag. VM configs can't be updated in place, so create a config for the new version, repoint CI, then delete the old config (see [vm-config-commands.md](../commands/vm-config-commands.md)).
 
+## macOS Guest Compatibility (Apple Silicon)
+
+Full table: [Orka compatibility matrix](https://docs.macstadium.com/orka/orka-overview/compatibility-matrix). Key rules:
+
+- **macOS 27 Golden Gate guests:** need Orka 3.6+ and a host on macOS 26.6.2 or later. macOS 15 hosts can't run macOS 27 guests. Deploy from `ghcr.io/macstadium/orka-images/golden-gate:latest`, or upgrade an existing VM to macOS 27 in place and save it as a new image.
+- **macOS 27 VMs need more than 2 GB of RAM to boot** (at 2 GB or less they fail to start). MacStadium recommends at least 4 GB, based on its own testing. `--memory` takes gigabytes:
+  ```bash
+  orka3 vm deploy --image ghcr.io/macstadium/orka-images/golden-gate:latest --memory 4
+  ```
+- **macOS 27 as a host OS isn't signed off yet.** MacStadium's evaluation found no blockers, but final validation isn't complete, so macOS 26.6.2 stays the recommended host (and the MSDC default). On MacStadium-hosted clusters, macOS 27 hosts can't grant TCC permissions programmatically, which affects NFS-hosted images and shared VM storage on newly provisioned hosts. Self-managing hosts and want macOS 27? Contact MacStadium support first.
+- **macOS 26 Tahoe guests:** Orka 3.5+, host macOS 15.6+.
+- **`latest` on MacStadium images** (`ghcr.io/macstadium/orka-images/*:latest`) means the most recent image MacStadium has published, not the newest macOS Apple has released. Images are built and published manually, so there can be a gap. For a newer macOS, deploy from an existing image, upgrade the guest in place (see the known issue below), and save or push the result.
+
 ## Apple Silicon Image Known Issues
 
-- **Keep Orka VM Tools on the cluster's release line** (3.x VM Tools on a 3.x cluster). A mismatch breaks disk resize and shared storage. After a cluster upgrade, rebuild custom golden images with `brew upgrade orka-vm-tools`. VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release, so a 3.6.4 cluster runs VM Tools 3.6.0, so don't expect the VM Tools version to equal the cluster version.
+- **Keep Orka VM Tools on the cluster's release line** (3.x VM Tools on a 3.x cluster). A mismatch breaks disk resize and shared storage. After a cluster upgrade, rebuild custom golden images with `brew upgrade orka-vm-tools`. VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release, so a 3.6.4 cluster runs VM Tools 3.6.0. Don't expect the VM Tools version to equal the cluster version. VM Tools only works on Apple silicon guests running macOS 13 or later.
 - **Upgrade macOS before resizing the disk.** A macOS upgrade can fail on a resized VM. Upgrade first and resize last. If you've already resized, start from an unresized image.
-- **Provisioning UDID isn't stable across deploys on Sequoia.** If signing needs a stable Provisioning UDID, build from a Sonoma base image, upgrade the guest to Sequoia in place, then save the image.
+- **Provisioning UDID isn't stable across deploys on Sequoia.** If signing needs a stable Provisioning UDID, build from a Sonoma base image, upgrade the guest to Sequoia in place, then save the image. Apply the in-place upgrade workaround below before upgrading, or the 15.x guest ends up with its usable memory capped.
+- **In-place upgrades to macOS 15.x and 26.x inside a VM currently fail** (Software Update or `startosinstall`). 26.x guests never finish the first boot after the upgrade restart; 15.x guests boot but can use only about 1.75 GiB of memory. Upgrades to macOS 27 aren't affected. Affected VMs can't be repaired: recreate them and apply the workaround before upgrading. See `references/troubleshooting/image-issues.md` for the check and the workaround.
+- **Hardened or security-tooled images:** when you bump agent versions or add a tool, save under a new tag (for example `my-team-hardened-sequoia-v2`) instead of overwriting the image your team deploys from, so you can roll back. For many deploys from one image, pre-cache it: `orka3 imagecache add <IMAGE_NAME> --all`.
 
 ## Image Management Best Practices
 

@@ -1,10 +1,11 @@
 # Migration and Backup Workflows
 
-This guide covers Intel to Apple Silicon migration and disaster recovery strategies.
+This guide covers Intel to Apple Silicon migration, NFS-to-OCI (Harbor) image migration, and disaster recovery strategies.
 
 ## Contents
 - [Migration from Intel to Apple Silicon](#migration-from-intel-to-apple-silicon)
 - [Intel vs. Apple Silicon Feature Comparison](#intel-vs-apple-silicon-feature-comparison)
+- [Migrating NFS Images to OCI with Harbor](#migrating-nfs-images-to-oci-with-harbor)
 - [Disaster Recovery and Backup Strategy](#disaster-recovery-and-backup-strategy)
 - [Image Backup to OCI Registry (Apple Silicon)](#image-backup-to-oci-registry-apple-silicon)
 - [Recovery Procedures](#recovery-procedures)
@@ -61,6 +62,41 @@ orka3 vmc create arm-version \
 | OCI registry push | Not supported | Supported |
 | Image caching | Not supported | Supported |
 | Disk resize | SSH credentials for automatic repartition, otherwise manual | Requires Orka VM Tools in the guest, on the cluster's release line |
+
+## Migrating NFS Images to OCI with Harbor
+
+Requires Orka 3.5+ (check with `orka3 version`) and a MacStadium-provisioned Harbor instance (request it from support@macstadium.com). Harbor credentials are in your firewall's Credentials section in My Cloud; the Harbor URL is usually the last IP in your Orka subnet (for example `https://10.221.189.254`) with a default project of `library`. Full guide: [Migrate NFS Orka images to OCI format with Harbor](https://docs.macstadium.com/orka/oci-images/orka-self-service-migrating-nfs-images-to-oci-with-harbor).
+
+```bash
+# 1. Add Harbor credentials (namespace-specific: repeat with --namespace for each namespace you deploy in)
+echo "$HARBOR_PASSWORD" | orka3 regcred add <HARBOR_FQDN> --username <HARBOR_USER> --password-stdin
+orka3 regcred list
+
+# 2. Pick the NFS images to convert
+orka3 image list
+
+# 3. Deploy a temporary VM from the NFS image (--memory is a number of GB)
+orka3 vm deploy migration-temp-vm --image <NFS_IMAGE_NAME> --cpu 4 --memory 8
+orka3 vm list migration-temp-vm            # Wait until it's running
+
+# 4. Push it to Harbor as an OCI image, then check the push job
+orka3 vm push migration-temp-vm <HARBOR_FQDN>/library/<NEW_IMAGE_NAME>:<TAG>
+orka3 vm get-push-status <JOB_NAME>
+
+# 5. Cache the OCI image on nodes and watch progress
+orka3 imagecache add <HARBOR_FQDN>/library/<NEW_IMAGE_NAME>:<TAG> --all
+orka3 imagecache info <HARBOR_FQDN>/library/<NEW_IMAGE_NAME>:<TAG>
+
+# 6. Clean up, then repeat for each image
+orka3 vm delete migration-temp-vm
+```
+
+**Point CI/CD at the OCI image:**
+- **GitHub Actions and GitLab** deploy from a VM config. Create one for the OCI image (`orka3 vm-config create <VM_CONFIGURATION_NAME> --image <HARBOR_FQDN>/library/<NEW_IMAGE_NAME>:<TAG>`), then set `ORKA_VM_CONFIG` (GitHub runner, restart the container) or `ORKA_CONFIG_NAME` (GitLab CI/CD variable or `.gitlab-ci.yml`) to it.
+- **Jenkins** takes the image from each Orka Template (Manage Jenkins > Nodes and Clouds > Configure Clouds) and each permanent agent's node configuration, not from the Jenkinsfile. Set **Image** to the OCI reference.
+- **Packer:** set `source_image` (and `image_name`) to full OCI references, and push Packer-built images to Harbor.
+
+**Validate and roll out:** deploy a test VM from the OCI image and boot-test it, run your integration smoke tests, and watch Harbor storage. Keep the NFS images until the OCI versions are proven, migrate integrations one at a time, and pre-cache frequently used images on all nodes, ideally off-peak.
 
 ## Disaster Recovery and Backup Strategy
 
