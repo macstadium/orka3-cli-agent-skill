@@ -5,30 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - Orka 4.0
+## [Unreleased] - 2.0.0 (Orka 4.0)
 
-Draft. Orka 4.0 had not shipped when this was written; targeted for around 2026-10-28. Verified against `releases/cluster/4.0` and the 4.0 docs PRs (macstadium-docs #390 and #394), not against a released build.
-
-### Added
-
-- `references/commands/emulator-commands.md`: `orka3 emulator-config create`/`list`/`delete` (alias `emc`), plus `--config`, `--device-profile` and `--grpc` on `orka3 emulator deploy`; gRPC endpoint section; `RELAY-IP`/`RELAY-PORT`/`GRPC-PORT` list columns; `PairedVMStopped` and `EmulatorUnschedulable` lifecycle reasons
-- `references/commands/vm-commands.md`: `--userdata` on `orka3 vm deploy` and the `USERDATA-PHASE` column, with the run-once semantics, 64 KiB limit, `ORKA_USERDATA_TIMEOUT`, `/var/log/orka/userdata.log`, and the Orka 4.0 orka-vm-tools requirement
-- `references/commands/admin-commands.md`: `orka3 rbac add-subject`/`list-subjects`/`remove-subject` with `--role admin|dev`, and a mapping table from the deprecated `orka3 rolebinding` commands
-- `SKILL.md`: Essential Context entries for User Data, RBAC subjects, and the 4.0 removals; four new Reference Files rows
+Draft, held until Orka 4.0 ships (GA around 2026-10-28). Verified against `releases/cluster/4.0` at `57f99689`, the published 4.0.0 CLI build, and macstadium-docs #383, #390, #394, #402, #406, #417, and #436. Major version because the CLI command changes.
 
 ### Changed
 
-- Android emulators are GA in Orka 4.0, no longer early access
-- `references/commands/image-commands.md`: NFS-hosted images, `orka3 vm save` and `orka3 vm commit` marked deprecated in 4.0, pointing at `orka3 vm push` and `orka3 imagecache`
+- **CLI renamed to `orka` (OK-6390).** Command examples, headings, and anchors use `orka`. `SKILL.md` has a new "Which CLI" section: `orka` is the 4.x CLI, `orka3` stays the 3.6 CLI, both install side by side and share the config file and the `orka` kubeconfig context, no alias ships, running the 4.0 CLI as `orka3` warns on stderr only, the optional `orka3` symlink bridge and its caveats, no `orka` Homebrew cask yet, and the legacy 2.x `orka` note. Intel-only and removed commands, the Intel to Apple silicon migration, and other 3.6-only steps stay `orka3`. The skill name and directory are unchanged.
+- Android emulators are GA in Orka 4.0, no longer early access.
+- Emulator commands resolve the namespace like `vm` (`--namespace`, `ORKA_DEFAULT_NAMESPACE`, the `orka` context, then `orka-default`); emulator configurations always live in `orka-default`.
+- Workflow and troubleshooting examples use `orka rbac ... --role dev`. `rolebinding` is deprecated and hidden from `--help` in 4.0; 3.6 users get an `orka3 rb` note.
+- NFS-hosted images, `image`, `remote-image`, `vm save`, and `vm commit` marked deprecated in 4.0, with the exact stderr warning.
+- Pod quota text from 1.4.0 marked as Orka 3.6 and 3.7.0-alpha only.
+- The 3.6.3+ same-name re-cache known issue is marked fixed in Orka 4.0.
+
+### Added
+
+- `emulator-commands.md`: `emulator-config create`/`list`/`delete` (aliases `emc`, `emuconfig`), `--config` and `--grpc` on deploy, `--grpc=false` and `--device-profile ""` overrides, gRPC endpoint section, list columns including `-o wide`, CLI JSON keys (`relayIp`, `relayPort`, `grpcPort`), `PairedVMStopped` and `EmulatorUnschedulable`, sizing and density (about 5 to 6 GB of host memory per emulator, memory is the usual limit, CPU and memory come from the device profile, animation `adb` commands), REST paths, and the Play Store ADB limitation as a 4.0 known issue.
+- `vm-commands.md`: `--userdata` and `USERDATA-PHASE`, with run-once semantics, the meaning of `skipped`, the 3.7.0-alpha VM Tools exception, and script visibility through Kubernetes read access. Removed `vm resize --user`/`--password`. `vm` and `image` reject unknown subcommands with a non-zero exit.
+- `admin-commands.md`: `rbac add-subject`/`list-subjects`/`remove-subject` with `--role admin|dev`, the MSDC-hosted `--role admin` limitation, and the `rolebinding` deprecation message.
+- `rest-api.md`: "Orka 4.0 API Changes" (removed routes return `404`, `cluster-info` drops `gpuPassthroughEnabled`, Intel-only fields return `400`, `netBoost` accepted and ignored, webhook rejection messages, 3.6 objects can still be updated and deleted, deprecation headers), emulator configuration endpoints, `config` and `grpc` on deploy, `grpcRelayPort`, `userdata`, and the `/api/v1/rbac` routes.
+- `upgrade-workflows.md`: "Upgrading to Orka 4.0" (requires 3.6, Intel worker nodes block the upgrade at the pre-check with no changes made, schedule with support), Orka-managed PDBs and other control plane changes, and the 4.0 per-node limits (`osx_node_orka_quota_job` default `2`, node pod quota `110`, emulators uncapped).
+- `deployment-issues.md`: `Not enough disk space on node <NODE> to deploy the VM`, and Intel image or setting rejections on 4.0.
+- `image-commands.md`, `image-issues.md`: `imagecache remove --all`/`--tags` skip uncached nodes (per-node `202`) on 4.0, cache record cleanup, and the 4.0 eviction fixes.
+- `monitoring.md`: 4.0 operator metrics (`vm_namespace` label, pending-VM queue metrics, exponential buckets, `orka-webhooks` metrics endpoint).
 
 ### Removed
 
-- Documented the Orka 4.0 removals rather than deleting them, since Orka 3.6 remains the last Intel release and is supported through March 2028: `orka3 vm start|stop|suspend|resume|revert`, `orka3 image generate`, the `orka3 iso` and `orka3 remote-iso` commands, and the `--iso`, `--gpu`, `--system-serial`, `--disable-net-boost` and `--legacy-io` flags
+- Documented the Orka 4.0 removals rather than deleting them, since Orka 3.6 remains the last Intel release and is supported through March 2028: `orka3 vm start|stop|suspend|resume|revert`, `orka3 image generate`, the `orka3 iso` and `orka3 remote-iso` commands, the `--iso`, `--gpu`, `--system-serial`, `--disable-net-boost`, and `--legacy-io` flags on `vm deploy` and `vm-config create`, and `--user`/`--password` on `vm resize`.
 
 ### Fixed
 
-- `references/commands/emulator-commands.md` documented `--device`, `--cpu` and `--memory` on `orka3 emulator deploy`, and a `--vm` filter on `orka3 emulator list`. The CLI has never accepted any of them, including in 3.7.0-alpha. Removed, with a note so they don't get reintroduced.
-- Noted that the CLI's JSON output uses `relayIp` while the API returns `relayIP`. Both are correct for their own surface and should not be normalised to each other.
+- `emulator-commands.md` said gRPC on an emulator configuration was CLI-only. The REST API accepts `grpc` on configuration create and returns it in configuration responses.
+- `emulator-commands.md` said `--device-profile` needed Orka 4.0. It was already in 3.7.0-alpha; 4.0 adds `--config` and `--grpc`.
+- `emulator-commands.md` documented `--device`, `--cpu`, and `--memory` on `emulator deploy`, and a `--vm` filter on `emulator list`. The CLI has never accepted any of them. Removed, with a note so they don't get reintroduced.
+- Em dashes replaced throughout the skill.
 
 ## [Unreleased] - 1.6.0
 
