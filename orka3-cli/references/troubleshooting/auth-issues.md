@@ -1,6 +1,6 @@
 # Authentication Troubleshooting
 
-This guide covers common authentication and access control issues with the Orka3 CLI.
+This guide covers common authentication and access control issues with the Orka CLI.
 
 ## Contents
 - [Token Expiration Reference](#token-expiration-reference)
@@ -29,16 +29,16 @@ This guide covers common authentication and access control issues with the Orka3
 **Solutions:**
 ```bash
 # 1. Re-authenticate
-orka3 login
+orka login
 
 # 2. For service accounts, generate new token
-orka3 sa token <SERVICE_ACCOUNT_NAME>
+orka sa token <SERVICE_ACCOUNT_NAME>
 
 # 3. Set new token
-orka3 user set-token <NEW_TOKEN>
+orka user set-token <NEW_TOKEN>
 
 # 4. Verify authentication
-orka3 node list
+orka node list
 ```
 
 **Prevention:**
@@ -59,7 +59,7 @@ The CLI needs two network paths to the cluster: the Orka API (HTTP, for example 
 **Diagnosis:**
 ```bash
 # 1. Check CLI configuration
-orka3 config view
+orka config view
 
 # 2. Verify VPN connection
 # Ensure you're connected to cluster VPN
@@ -73,11 +73,11 @@ curl -s -o /dev/null -w "%{http_code}" "$ORKA_API_URL/api/v1/cluster-info"
 **Solutions:**
 ```bash
 # 1. Verify API URL is correct
-orka3 config set --api-url http://10.221.188.20  # Orka 2.1+
+orka config set --api-url http://10.221.188.20  # Orka 2.1+
 # OR
-orka3 config set --api-url http://10.221.188.100  # Pre-2.1
+orka config set --api-url http://10.221.188.100  # Pre-2.1
 # OR
-orka3 config set --api-url https://company.orka.app  # Domain
+orka config set --api-url https://company.orka.app  # Domain
 
 # 2. Ensure VPN is connected
 # Check your VPN client
@@ -97,25 +97,25 @@ orka3 config set --api-url https://company.orka.app  # Domain
 **Diagnosis:**
 ```bash
 # Check whether you have access to a namespace
-# (Forbidden means no access; `orka3 namespace list` is admin-only)
-orka3 vm list --namespace <NAMESPACE>
+# (Forbidden means no access; `orka namespace list` is admin-only)
+orka vm list --namespace <NAMESPACE>
 
 # Try operations in orka-default (all users have access)
-orka3 vm list --namespace orka-default
+orka vm list --namespace orka-default
 ```
 
 **Solutions:**
 ```bash
 # Ask admin to grant access to required namespace
 # Admin runs:
-orka3 rb add-subject --namespace <TARGET_NAMESPACE> --user <YOUR_EMAIL>
+orka rbac add-subject --role dev --namespace <TARGET_NAMESPACE> --user <YOUR_EMAIL>
 
 # For service accounts:
-orka3 rb add-subject --namespace <TARGET_NAMESPACE> \
+orka rbac add-subject --role dev --namespace <TARGET_NAMESPACE> \
   --serviceaccount <SA_NAMESPACE>:<SA_NAME>
 ```
 
-**Known issue, fixed in Orka 3.6.4:** Namespaces created with `orka3 namespace create --enable-custom-pods` didn't grant the `orka-dev` role binding to users added afterward, leaving them without dev-level access even after `rb add-subject` succeeded. Namespaces created on 3.6.4+ are unaffected. If your custom-pods namespace was created before upgrading, this doesn't resolve automatically — contact [MacStadium support](mailto:support@macstadium.com) to have the missing role binding applied manually.
+**Known issue, fixed in Orka 3.6.4:** Namespaces created with `orka namespace create --enable-custom-pods` didn't grant the `orka-dev` role binding to users added afterward, leaving them without dev-level access even after `rb add-subject` succeeded. Namespaces created on 3.6.4+ are unaffected. If your custom-pods namespace was created before upgrading, this doesn't resolve automatically — contact [MacStadium support](mailto:support@macstadium.com) to have the missing role binding applied manually.
 
 ## Problem: Cannot create namespace / admin commands fail
 
@@ -137,14 +137,14 @@ Only admin users can perform certain operations:
 # These operations require the Orka admin role.
 # Admin role is assigned at the cluster level by MacStadium during provisioning.
 # To check if you have admin access:
-orka3 namespace list    # Admin-only: succeeds for admins, Forbidden for everyone else
+orka namespace list    # Admin-only: succeeds for admins, Forbidden for everyone else
 
 # If you need admin access:
 # - Contact MacStadium support (support@macstadium.com) to modify role assignments
 # - Or have an existing admin delegate specific tasks via service accounts
 ```
 
-**Service account gets Forbidden on an admin-only task (hosted clusters):** service accounts created with `orka3 sa create` get developer permissions, and on MacStadium-hosted clusters customer admins can't edit the `orka-admin` RoleBinding. Ask MacStadium support to enable the managed `orka-admin` service account, then mint its token with `orka3 sa token orka-admin`. On self-managed clusters, edit the `orka-admin` RoleBinding directly instead. See `references/commands/admin-commands.md`.
+**Service account gets Forbidden on an admin-only task (hosted clusters):** service accounts created with `orka sa create` get developer permissions, and on MacStadium-hosted clusters customer admins can't edit the `orka-admin` RoleBinding. Ask MacStadium support to enable the managed `orka-admin` service account, then mint its token with `orka sa token orka-admin`. On self-managed clusters, edit the `orka-admin` RoleBinding directly instead. See `references/commands/admin-commands.md`.
 
 ## Problem: Service account token not working
 
@@ -155,7 +155,7 @@ orka3 namespace list    # Admin-only: succeeds for admins, Forbidden for everyon
 **Diagnosis:**
 ```bash
 # Check if service account exists
-orka3 sa list --namespace <SA_NAMESPACE>
+orka sa list --namespace <SA_NAMESPACE>
 
 # Verify token hasn't expired
 # (Check when token was generated)
@@ -164,25 +164,25 @@ orka3 sa list --namespace <SA_NAMESPACE>
 **Solutions:**
 ```bash
 # Generate new token
-orka3 sa token <SERVICE_ACCOUNT_NAME> --namespace <SA_NAMESPACE>
+orka sa token <SERVICE_ACCOUNT_NAME> --namespace <SA_NAMESPACE>
 
 # For automation, use no-expiration tokens
-orka3 sa token <SA_NAME> --no-expiration
+orka sa token <SA_NAME> --no-expiration
 
 # If service account was deleted, create new one
-orka3 sa create <SA_NAME> --namespace <NAMESPACE>
-orka3 sa token <SA_NAME> --namespace <NAMESPACE>
+orka sa create <SA_NAME> --namespace <NAMESPACE>
+orka sa token <SA_NAME> --namespace <NAMESPACE>
 ```
 
 ## Testing a service account token without replacing your login
 
-`orka3 user set-token` writes the token into your kubeconfig, replacing your own login. To test a service account token, point the CLI at a throwaway kubeconfig:
+`orka user set-token` writes the token into your kubeconfig, replacing your own login. To test a service account token, point the CLI at a throwaway kubeconfig:
 
 ```bash
 SA_KUBECONFIG=$(mktemp)
-KUBECONFIG="$SA_KUBECONFIG" orka3 user set-token "$SA_TOKEN"
-KUBECONFIG="$SA_KUBECONFIG" orka3 vm list --namespace <NAMESPACE>   # runs as the service account
-orka3 vm list --namespace <NAMESPACE>                                # still runs as you
+KUBECONFIG="$SA_KUBECONFIG" orka user set-token "$SA_TOKEN"
+KUBECONFIG="$SA_KUBECONFIG" orka vm list --namespace <NAMESPACE>   # runs as the service account
+orka vm list --namespace <NAMESPACE>                                # still runs as you
 ```
 
 `user set-token` takes the token as a positional argument, so it's visible in `ps` output while the command runs. Use single-tenant CI runners.

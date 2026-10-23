@@ -1,6 +1,6 @@
 # VM Configuration Commands Reference
 
-This reference provides detailed syntax and examples for VM configuration template commands in Orka3 CLI.
+This reference provides detailed syntax and examples for VM configuration template commands in the Orka CLI.
 
 **Scope:** VM configs always live in `orka-default` and are visible to every user and service account with access to it. `vm-config` has no `--namespace` flag; pass `-n` on `vm deploy` instead.
 
@@ -8,13 +8,13 @@ This reference provides detailed syntax and examples for VM configuration templa
 
 **Sizing (Apple silicon):** nodes run at most 2 VMs each, so size configs at about half a node's allocatable CPU and memory. Larger configs strand the second slot.
 
-## orka3 vm-config create (alias: vmc)
+## orka vm-config create (alias: vmc)
 
 Create a VM configuration template.
 
 **Syntax:**
 ```bash
-orka3 vm-config create <NAME> [flags]
+orka vm-config create <NAME> [flags]
 ```
 
 **Options:**
@@ -30,12 +30,14 @@ orka3 vm-config create <NAME> [flags]
 - `--display-height int` - Virtual display height, 480-2160 (3.4+)
 - `--display-dpi int` - Virtual display DPI, 60-320 (3.4+)
 
-**Intel-only Options:**
+**Intel-only options (Orka 3.6 and earlier, removed in Orka 4.0):**
 - `--iso string` - ISO name to attach
 - `--gpu` - Enable GPU passthrough
 - `--system-serial string` - Custom serial number
 - `--disable-net-boost` - Disable network boost
 - `--legacy-io` - Legacy IO, required for High Sierra and Mojave VMs
+
+On Orka 4.0 these flags return an unknown-flag error, and the API rejects `iso`, `systemSerial`, `gpuPassthrough: true`, and `legacyIO: true` with `400`. Use them only with `orka3` on a 3.6 cluster.
 
 **Config Name Requirements:**
 - Max 50 characters
@@ -45,20 +47,20 @@ orka3 vm-config create <NAME> [flags]
 
 **Examples:**
 ```bash
-orka3 vmc create medium-ventura-vm --image 90gbventurassh.img --cpu 6
-orka3 vmc create small-arm-vm -i ghcr.io/org/orka-images/orka-arm:latest --cpu 4
-orka3 vmc create medium-vm --image sonoma.orkasi --memory 5
-orka3 vmc create build-vm --image sonoma.orkasi --tag jenkins-builds --tag-required
-orka3 vmc create wide-display-vm --image sonoma.orkasi --display-width 2920 --display-height 1380 --display-dpi 100
+orka vmc create medium-ventura-vm --image 90gbventurassh.img --cpu 6
+orka vmc create small-arm-vm -i ghcr.io/org/orka-images/orka-arm:latest --cpu 4
+orka vmc create medium-vm --image sonoma.orkasi --memory 5
+orka vmc create build-vm --image sonoma.orkasi --tag jenkins-builds --tag-required
+orka vmc create wide-display-vm --image sonoma.orkasi --display-width 2920 --display-height 1380 --display-dpi 100
 ```
 
-## orka3 vm-config list (alias: vmc)
+## orka vm-config list (alias: vmc)
 
 Show information about VM configurations.
 
 **Syntax:**
 ```bash
-orka3 vm-config list [<NAME>] [--output <FORMAT>] [flags]
+orka vm-config list [<NAME>] [--output <FORMAT>] [flags]
 ```
 
 **Options:**
@@ -66,17 +68,17 @@ orka3 vm-config list [<NAME>] [--output <FORMAT>] [flags]
 
 **Examples:**
 ```bash
-orka3 vmc list
-orka3 vmc list --output wide
-orka3 vmc list small-ventura-vm
-orka3 vmc list -o json | jq -r '.[] | select(.image | startswith("ghcr.io/")) | .name'
+orka vmc list
+orka vmc list --output wide
+orka vmc list small-ventura-vm
+orka vmc list -o json | jq -r '.[] | select(.image | startswith("ghcr.io/")) | .name'
 ```
 
-## orka3 vm-config delete (alias: vmc)
+## orka vm-config delete (alias: vmc)
 
 Delete VM configuration templates.
 
 **Syntax:**
 ```bash
-orka3 vm-config delete <NAME> [<NAME2> ...] [flags]
+orka vm-config delete <NAME> [<NAME2> ...] [flags]
 ```

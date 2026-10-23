@@ -29,8 +29,8 @@ Current plugin release: 2.0.1, published on the [JetBrains Marketplace](https://
 
 **2. Create a service account token.** Personal tokens expire after one hour and break agent provisioning:
 ```bash
-orka3 sa create teamcity
-orka3 sa token teamcity
+orka sa create teamcity
+orka sa token teamcity
 ```
 
 **3. Prepare the VM base image:**
@@ -42,12 +42,12 @@ The base image must have:
 
 ```bash
 # On the VM, after agent syncs and you've stopped it:
-orka3 vm save <VM_NAME> <NEW_IMAGE_NAME>
+orka vm save <VM_NAME> <NEW_IMAGE_NAME>
 # or commit:
-orka3 vm commit <VM_NAME>
+orka vm commit <VM_NAME>
 
 # Create a VM config from the image:
-orka3 vmc create <VM_CONFIGURATION_NAME> --image <NEW_IMAGE_NAME>
+orka vmc create <VM_CONFIGURATION_NAME> --image <NEW_IMAGE_NAME>
 ```
 
 **4. Configure a cloud profile:** see below.
@@ -59,7 +59,7 @@ Go to Projects > (your project) > Edit Project Settings > Cloud Profiles > Creat
 | Field | Required | Value |
 |-------|----------|-------|
 | Orka endpoint | Yes | Orka API URL, from the IP Allocation table in My Cloud |
-| Orka Token | Yes | Service account token from `orka3 sa token <SERVICE_ACCOUNT_NAME>` |
+| Orka Token | Yes | Service account token from `orka sa token <SERVICE_ACCOUNT_NAME>` |
 | VM Config | Yes | VM config name created above |
 | Namespace | Yes | Namespace VMs deploy into. Must match the service account's access |
 | VM user | Yes | SSH user on the deployed VM |

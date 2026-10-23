@@ -1,6 +1,6 @@
 # REST API Reference
 
-This reference covers calling the Orka API server directly, for tools that can't shell out to the Orka3 CLI. Prefer the CLI where it's available.
+This reference covers calling the Orka API server directly, for tools that can't shell out to the Orka CLI. Prefer the CLI where it's available.
 
 ## Contents
 - [Swagger UI](#swagger-ui)
@@ -31,8 +31,8 @@ curl <ORKA_API_URL>/api/v1/cluster-info
 There is no login endpoint. Get a token from the CLI and pass it as a bearer token:
 
 ```bash
-orka3 sa token <SERVICE_ACCOUNT_NAME>     # Automation and CI/CD (service account)
-orka3 user get-token                      # Interactive use only (expires in 1 hour)
+orka sa token <SERVICE_ACCOUNT_NAME>     # Automation and CI/CD (service account)
+orka user get-token                      # Interactive use only (expires in 1 hour)
 ```
 
 ```bash
@@ -112,7 +112,7 @@ Don't use the Orka 2.x `vm_metadata.items` shape; it is not part of the 3.x depl
 There is no REST endpoint for push status. The CLI reads the push job's pods through the Kubernetes API. Check status with:
 
 ```bash
-orka3 vm get-push-status <JOB_NAME> -n <NS>
+orka vm get-push-status <JOB_NAME> -n <NS>
 ```
 
 See `vm-commands.md` for status values.

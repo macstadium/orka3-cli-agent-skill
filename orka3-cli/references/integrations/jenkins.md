@@ -32,8 +32,8 @@ A Jenkins plugin that adds Orka as a cloud provider and as a permanent agent typ
 The Orka Token field takes a Jenkins credential (Secret text) holding a **service account token**. Never use a user token; user tokens expire after 1 hour.
 
 ```bash
-orka3 sa create <SA_NAME> -n <NAMESPACE>
-orka3 sa token <SA_NAME> -n <NAMESPACE>
+orka sa create <SA_NAME> -n <NAMESPACE>
+orka sa token <SA_NAME> -n <NAMESPACE>
 ```
 
 The VM Credentials field is a separate Jenkins credential (username and password, or SSH username with private key) used by the controller to SSH into the VM.

@@ -4,24 +4,24 @@ This reference provides detailed syntax and examples for Android emulator and em
 
 **Generally available in Orka 4.0.** Apple Silicon nodes only. Introduced as early access in Orka 3.7.0-alpha. Emulator configurations, `--config`, and `--grpc` require Orka 4.0 or later. `--vm`, `--platform`, `--image-type`, and `--device-profile` were already in the alpha; in 4.0, `--platform` and `--image-type` aren't required when `--config` is set.
 
-Emulator commands resolve the namespace the same way as `vm`: the `--namespace` flag, then the `ORKA_DEFAULT_NAMESPACE` environment variable, then the namespace in the `orka` kubeconfig context, then `orka-default`. `orka3 user login` resets the context namespace to `orka-default`, so use `ORKA_DEFAULT_NAMESPACE` for a lasting default. Emulator configurations always live in `orka-default`, whatever your default namespace is.
+Emulator commands resolve the namespace the same way as `vm`: the `--namespace` flag, then the `ORKA_DEFAULT_NAMESPACE` environment variable, then the namespace in the `orka` kubeconfig context, then `orka-default`. `orka user login` resets the context namespace to `orka-default`, so use `ORKA_DEFAULT_NAMESPACE` for a lasting default. Emulator configurations always live in `orka-default`, whatever your default namespace is.
 
-Aliases for `orka3 emulator` are `emu`, `emus`, and `emulators`. Aliases for `orka3 emulator-config` are `emc`, `emuconfig`, `emuconfigs`, and `emulator-configs`.
+Aliases for `orka emulator` are `emu`, `emus`, and `emulators`. Aliases for `orka emulator-config` are `emc`, `emuconfig`, `emuconfigs`, and `emulator-configs`.
 
 ## Contents
-- [orka3 emulator deploy](#orka3-emulator-deploy)
-- [orka3 emulator list](#orka3-emulator-list)
-- [orka3 emulator delete](#orka3-emulator-delete)
-- [orka3 emulator-config create](#orka3-emulator-config-create)
-- [orka3 emulator-config list](#orka3-emulator-config-list)
-- [orka3 emulator-config delete](#orka3-emulator-config-delete)
+- [orka emulator deploy](#orka-emulator-deploy)
+- [orka emulator list](#orka-emulator-list)
+- [orka emulator delete](#orka-emulator-delete)
+- [orka emulator-config create](#orka-emulator-config-create)
+- [orka emulator-config list](#orka-emulator-config-list)
+- [orka emulator-config delete](#orka-emulator-config-delete)
 - [Connecting via ADB](#connecting-via-adb)
 - [gRPC endpoint](#grpc-endpoint)
 - [Sizing and density](#sizing-and-density)
 - [REST API](#rest-api)
 - [Known Issues and Limitations](#known-issues-and-limitations)
 
-## orka3 emulator deploy
+## orka emulator deploy
 
 Deploy an Android emulator paired with a running Orka VM. The emulator runs directly on the same physical host node as the VM (Apple Silicon does not support nested virtualization, so the emulator cannot run inside the VM itself) and connects to it over an ADB relay bridge.
 
@@ -29,7 +29,7 @@ Describe the emulator either with `--platform` and `--image-type`, or with `--co
 
 **Syntax:**
 ```bash
-orka3 emulator deploy [AVD_NAME] --vm <VM_NAME> (--platform <PLATFORM> --image-type <IMAGE_TYPE> | --config <CONFIG_NAME>) [flags]
+orka emulator deploy [AVD_NAME] --vm <VM_NAME> (--platform <PLATFORM> --image-type <IMAGE_TYPE> | --config <CONFIG_NAME>) [flags]
 ```
 
 **Options:**
@@ -47,28 +47,28 @@ orka3 emulator deploy [AVD_NAME] --vm <VM_NAME> (--platform <PLATFORM> --image-t
 **Examples:**
 ```bash
 # Deploy an emulator paired with a running VM
-orka3 emulator deploy --vm my-macos-vm --platform android-36 --image-type google_apis
+orka emulator deploy --vm my-macos-vm --platform android-36 --image-type google_apis
 
 # Deploy a named emulator
-orka3 emulator deploy my-emulator --vm my-macos-vm --platform android-36 --image-type google_apis
+orka emulator deploy my-emulator --vm my-macos-vm --platform android-36 --image-type google_apis
 
 # Deploy with a specific device profile
-orka3 emulator deploy --vm my-macos-vm --platform android-35 --image-type google_apis --device-profile pixel_8
+orka emulator deploy --vm my-macos-vm --platform android-35 --image-type google_apis --device-profile pixel_8
 
 # Deploy from an emulator configuration
-orka3 emulator deploy --vm my-macos-vm --config android-36-google-apis
+orka emulator deploy --vm my-macos-vm --config android-36-google-apis
 
 # Deploy from a configuration, overriding its device profile
-orka3 emulator deploy --vm my-macos-vm --config android-36-google-apis --device-profile pixel_tablet
+orka emulator deploy --vm my-macos-vm --config android-36-google-apis --device-profile pixel_tablet
 
 # Deploy from a configuration, ignoring the device profile it sets (avdmanager default)
-orka3 emulator deploy --vm my-macos-vm --config android-36-google-apis --device-profile ""
+orka emulator deploy --vm my-macos-vm --config android-36-google-apis --device-profile ""
 
 # Deploy with the gRPC endpoint enabled
-orka3 emulator deploy --vm my-macos-vm --platform android-36 --image-type google_apis --grpc
+orka emulator deploy --vm my-macos-vm --platform android-36 --image-type google_apis --grpc
 
 # Deploy from a configuration that turns gRPC on, but keep it off for this emulator
-orka3 emulator deploy --vm my-macos-vm --config android-36-grpc --grpc=false
+orka emulator deploy --vm my-macos-vm --config android-36-grpc --grpc=false
 ```
 
 **Notes:**
@@ -77,18 +77,18 @@ orka3 emulator deploy --vm my-macos-vm --config android-36-grpc --grpc=false
 - Platform, device profile, and image type values pass straight through to the Android SDK's `avdmanager`/`sdkmanager` tooling, so any combination those tools support works on a best-effort basis. The only hard constraint is an ARM-native system image, since the emulator runs directly on the Apple Silicon host. Common values: platforms `android-35`/`android-36`/`android-37.0` (use the SDK's own name, including a minor version where it has one); device profiles `pixel_8`/`pixel_9`/`pixel_tablet`; image types `google_apis`/`google_apis_playstore`/`default`.
 - Platform, system image, and device profile can't be changed after the emulator is created. Delete it and deploy a new one.
 - Any of `--platform`, `--image-type`, and `--device-profile` set alongside `--config` override the configuration.
-- Deploy waits until the emulator is running, or until the timeout elapses. A timeout is not necessarily a failure: the emulator may still be `Pending` while its AVD boots. Poll with `orka3 emulator list <AVD_NAME>` until it settles. If the emulator reaches `Failed`, the CLI prints the error and deletes the emulator.
+- Deploy waits until the emulator is running, or until the timeout elapses. A timeout is not necessarily a failure: the emulator may still be `Pending` while its AVD boots. Poll with `orka emulator list <AVD_NAME>` until it settles. If the emulator reaches `Failed`, the CLI prints the error and deletes the emulator.
 - First deploy on a node may be slow: Android SDK components (roughly 2-4GB per platform and image type pair) download at deploy time if not already cached on the host.
 
 **There is no `--device`, `--cpu`, or `--memory` flag.** Earlier versions of this reference listed them; the CLI has never accepted them, including in 3.7.0-alpha. Use `--device-profile` for the device.
 
-## orka3 emulator list
+## orka emulator list
 
 Show basic or extended information about Android emulators. With no names, lists every emulator in the namespace.
 
 **Syntax:**
 ```bash
-orka3 emulator list [AVD_NAME_1 [AVD_NAME_2 ...]] [--namespace <NAMESPACE>] [--output wide|json] [flags]
+orka emulator list [AVD_NAME_1 [AVD_NAME_2 ...]] [--namespace <NAMESPACE>] [--output wide|json] [flags]
 ```
 
 **Options:**
@@ -98,28 +98,28 @@ orka3 emulator list [AVD_NAME_1 [AVD_NAME_2 ...]] [--namespace <NAMESPACE>] [--o
 **Examples:**
 ```bash
 # List all emulators in the default namespace
-orka3 emulator list
+orka emulator list
 
 # List emulators in another namespace with extended information
-orka3 emulator list --namespace orka-test --output wide
+orka emulator list --namespace orka-test --output wide
 
 # Show a specific emulator as JSON
-orka3 emulator list my-emulator --output json
+orka emulator list my-emulator --output json
 ```
 
 **Notes:**
 - Default table columns: `NAME`, `VM`, `STATUS`, `RELAY-IP`, `RELAY-PORT`, `GRPC-PORT`, `NODE`, `AGE`. `GRPC-PORT` is empty for an emulator deployed without gRPC. `-o wide` adds `PLATFORM`, `IMAGE-TYPE`, `DEVICE-PROFILE`, and `OWNER`.
 - Use this to check status (`Pending`, `Running`, `Failed`) after a deploy times out. A failed emulator carries a reason in its error message.
-- **There is no `--vm` filter.** Earlier versions of this reference listed one; the CLI has never had it. Pass AVD names, or filter JSON on the `vm` field: `orka3 emulator list -o json | jq -r '.[] | select(.vm == "<VM_NAME>") | .name'`. The API's `GET /emulators/android?vm=<VM_NAME>` filter is a separate surface and does exist.
+- **There is no `--vm` filter.** Earlier versions of this reference listed one; the CLI has never had it. Pass AVD names, or filter JSON on the `vm` field: `orka emulator list -o json | jq -r '.[] | select(.vm == "<VM_NAME>") | .name'`. The API's `GET /emulators/android?vm=<VM_NAME>` filter is a separate surface and does exist.
 - **JSON field names differ between the CLI and the API.** CLI JSON keys are the column names in camelCase: `relayIp`, `relayPort`, `grpcPort`. The API returns `relayIP`, `relayPort`, and `grpcRelayPort`. Both are correct for their own surface. Don't normalize one to the other in a script.
 
-## orka3 emulator delete
+## orka emulator delete
 
 Delete one or more Android emulators and free their resources on the node. This cannot be undone.
 
 **Syntax:**
 ```bash
-orka3 emulator delete <AVD_NAME> [AVD_NAME_2 ...] [--namespace <NAMESPACE>] [flags]
+orka emulator delete <AVD_NAME> [AVD_NAME_2 ...] [--namespace <NAMESPACE>] [flags]
 ```
 
 **Options:**
@@ -127,20 +127,20 @@ orka3 emulator delete <AVD_NAME> [AVD_NAME_2 ...] [--namespace <NAMESPACE>] [fla
 
 **Examples:**
 ```bash
-orka3 emulator delete my-emulator
-orka3 emulator delete my-emulator my-other-emulator --namespace orka-test
+orka emulator delete my-emulator
+orka emulator delete my-emulator my-other-emulator --namespace orka-test
 ```
 
 **Notes:**
 - Manual delete is only needed to remove an emulator before its paired VM is deleted. Deleting the VM cleans up its emulators automatically.
 
-## orka3 emulator-config create
+## orka emulator-config create
 
 Create an emulator configuration: a template storing a platform, system image type, and optionally a device profile and gRPC setting, so pipelines deploy with `--config` instead of repeating flags. Requires Orka 4.0 or later.
 
 **Syntax:**
 ```bash
-orka3 emulator-config create <CONFIG_NAME> --platform <PLATFORM> --image-type <IMAGE_TYPE> [flags]
+orka emulator-config create <CONFIG_NAME> --platform <PLATFORM> --image-type <IMAGE_TYPE> [flags]
 ```
 
 **Options:**
@@ -151,9 +151,9 @@ orka3 emulator-config create <CONFIG_NAME> --platform <PLATFORM> --image-type <I
 
 **Examples:**
 ```bash
-orka3 emc create android-36-google-apis --platform android-36 --image-type google_apis
-orka3 emc create pixel-8 --platform android-35 --image-type google_apis --device-profile pixel_8
-orka3 emc create android-36-grpc --platform android-36 --image-type google_apis --grpc
+orka emc create android-36-google-apis --platform android-36 --image-type google_apis
+orka emc create pixel-8 --platform android-35 --image-type google_apis --device-profile pixel_8
+orka emc create android-36-grpc --platform android-36 --image-type google_apis --grpc
 ```
 
 **Notes:**
@@ -162,13 +162,13 @@ orka3 emc create android-36-grpc --platform android-36 --image-type google_apis 
 - Orka copies the configuration's settings into the emulator at deploy time, so changing or deleting a configuration never affects emulators already running.
 - `--grpc` on a configuration turns gRPC on for every emulator deployed from it. A single deploy can still turn it off with `--grpc=false`. The REST API accepts `grpc` (bool) on configuration create and returns it in configuration responses when the configuration sets it.
 
-## orka3 emulator-config list
+## orka emulator-config list
 
 Show basic or extended information about emulator configurations. With no names, lists every configuration. Requires Orka 4.0 or later.
 
 **Syntax:**
 ```bash
-orka3 emulator-config list [CONFIG_1 [CONFIG_2 ...]] [--output wide|json] [flags]
+orka emulator-config list [CONFIG_1 [CONFIG_2 ...]] [--output wide|json] [flags]
 ```
 
 **Options:**
@@ -176,21 +176,21 @@ orka3 emulator-config list [CONFIG_1 [CONFIG_2 ...]] [--output wide|json] [flags
 
 **Examples:**
 ```bash
-orka3 emc list
-orka3 emc list --output wide
-orka3 emc list android-36-google-apis pixel-8
+orka emc list
+orka emc list --output wide
+orka emc list android-36-google-apis pixel-8
 ```
 
 **Notes:**
 - Default table columns: `NAME`, `PLATFORM`, `IMAGE-TYPE`, `DEVICE-PROFILE`, `GRPC`, `AGE`. `-o wide` adds `OWNER`.
 
-## orka3 emulator-config delete
+## orka emulator-config delete
 
 Delete one or more emulator configurations. Requires Orka 4.0 or later.
 
 **Syntax:**
 ```bash
-orka3 emulator-config delete <CONFIG_NAME> [CONFIG_2 ...] [flags]
+orka emulator-config delete <CONFIG_NAME> [CONFIG_2 ...] [flags]
 ```
 
 **Notes:**
@@ -199,10 +199,10 @@ orka3 emulator-config delete <CONFIG_NAME> [CONFIG_2 ...] [flags]
 
 ## Connecting via ADB
 
-Once the emulator is `Running`, get its relay IP and relay port from `orka3 emulator list` (the `RELAY-IP` and `RELAY-PORT` columns) or from the API response. From inside the paired macOS VM:
+Once the emulator is `Running`, get its relay IP and relay port from `orka emulator list` (the `RELAY-IP` and `RELAY-PORT` columns) or from the API response. From inside the paired macOS VM:
 
 ```bash
-orka3 emulator list <AVD_NAME> -o json | jq -r '.[0] | "\(.relayIp):\(.relayPort)"'   # Run where the CLI is configured
+orka emulator list <AVD_NAME> -o json | jq -r '.[0] | "\(.relayIp):\(.relayPort)"'   # Run where the CLI is configured
 adb connect <RELAY_IP>:<RELAY_PORT>                                                   # Run inside the paired VM
 adb devices
 ```

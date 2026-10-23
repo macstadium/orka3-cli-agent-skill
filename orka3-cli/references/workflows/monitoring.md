@@ -72,7 +72,7 @@ scrape_configs:
 Label node groups (`master`, `x86`, `arm`, and a separate label for burst nodes) so alerts and dashboards can split by hardware. Instead of hand-maintaining targets, generate a [file-based service discovery](https://prometheus.io/docs/guides/file-sd/) file from the cluster, once per namespace that has nodes:
 
 ```bash
-orka3 node list -n <NAMESPACE> -o json \
+orka node list -n <NAMESPACE> -o json \
   | jq '[.[] | {targets: ["\(.ip):9100"], labels: {node: .name, arch: .architecture}}]' \
   > <SD_DIR>/orka-nodes-<NAMESPACE>.json
 ```
@@ -140,7 +140,7 @@ Check the names your exporter actually exposes with `curl http://<NODE_IP>:9100/
     / node_filesystem_size_bytes{job="orka/node-exporter",fstype!~"tmpfs|devfs|autofs|nullfs|overlay"} > 0.85
   ```
 
-- **Node exporter down.** `up{job="orka/node-exporter"} == 0` for 5m. Then check `orka3 node list -o wide`.
+- **Node exporter down.** `up{job="orka/node-exporter"} == 0` for 5m. Then check `orka node list -o wide`.
 - **CI queue backlog (GitHub Actions).** Jobs waiting and no idle runner for 10 minutes means capacity is exhausted or deploys are failing:
 
   ```promql

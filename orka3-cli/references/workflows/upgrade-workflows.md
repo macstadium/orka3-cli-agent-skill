@@ -2,13 +2,13 @@
 
 ## Orka Cluster Upgrades (MSDC — MacStadium Data Centers)
 
-Self-service as of Orka 3.6+ via the Upgrade Service (v2), started and monitored from the `orka3` CLI. See [Upgrade Service (self-service, 3.6+)](#upgrade-service-self-service-36) below for the full command flow. Only fall back to a MacStadium support ticket if the cluster hasn't completed its v1→v2 migration yet, or for anything the Upgrade Service doesn't cover (Kubernetes control-plane version changes, hardware changes).
+Self-service as of Orka 3.6+ via the Upgrade Service (v2), started and monitored from the `orka` CLI. See [Upgrade Service (self-service, 3.6+)](#upgrade-service-self-service-36) below for the full command flow. Only fall back to a MacStadium support ticket if the cluster hasn't completed its v1→v2 migration yet, or for anything the Upgrade Service doesn't cover (Kubernetes control-plane version changes, hardware changes).
 
 ### Process
 1. Review release notes for the target version
-2. Confirm Upgrade Service and node agents are healthy: `orka3 upgrade versions`, `orka3 upgrade service status`, `orka3 upgrade service agents`
-3. Start the run: `orka3 upgrade run --version <VERSION>` (admin access required)
-4. Monitor: `orka3 upgrade status <RUN_NAME>`
+2. Confirm Upgrade Service and node agents are healthy: `orka upgrade versions`, `orka upgrade service status`, `orka upgrade service agents`
+3. Start the run: `orka upgrade run --version <VERSION>` (admin access required)
+4. Monitor: `orka upgrade status <RUN_NAME>`
 5. After upgrade: download the new CLI version and regenerate service account tokens if this was a full version upgrade (or if the release notes require it)
 6. Update Orka VM Tools in custom golden images (`brew upgrade orka-vm-tools`) and republish them. Match the cluster's release line (3.x cluster, 3.x VM Tools). VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release, so a 3.6.4 cluster runs VM Tools 3.6.0. A VM Tools mismatch breaks disk resize and shared storage on Apple silicon.
 
@@ -27,15 +27,15 @@ Full list of changes: [Orka 4.0.0 release notes](https://docs.macstadium.com/ork
 A cluster's version is the release version, but its components are versioned separately, and a patch release only publishes new builds of the components it changed. Some components keep an earlier number. Example: a 3.6.4 cluster runs the API server and Orka Engine at 3.6.3, because neither changed in 3.6.4. That is not a failed upgrade.
 
 ```bash
-orka3 version             # API Version (API server), Operator Version (operator, webhooks, CRDs)
-orka3 node list -o wide   # VERSION = Virtual Kubelet, RUNTIME = Orka Engine, per node
-orka3 version --client    # Local CLI only, no cluster call
+orka version             # API Version (API server), Operator Version (operator, webhooks, CRDs)
+orka node list -o wide   # VERSION = Virtual Kubelet, RUNTIME = Orka Engine, per node
+orka version --client    # Local CLI only, no cluster call
 ```
 
 Compare the version number only, against the [component version matrix](https://docs.macstadium.com/orka/orka-upgrades-and-release-notes/orka-component-versions). The suffix after the version (`-c8fe8aed`) is a build ID and can differ between clusters on the same release. On 3.4 the Engine version itself ends in `-oc` (`orka-engine://3.4.2-oc-<BUILD>`), and that `-oc` is part of the version.
 
 - A 3.6.4 cluster is on 3.6.4 when the operator and every node's Virtual Kubelet report 3.6.4.
-- If one node reports an earlier Virtual Kubelet or Engine than the matrix, that node's tooling wasn't upgraded. Send `orka3 node list -o wide` output to MacStadium support.
+- If one node reports an earlier Virtual Kubelet or Engine than the matrix, that node's tooling wasn't upgraded. Send `orka node list -o wide` output to MacStadium support.
 - Use the CLI version the matrix lists for the release. A newer CLI can include commands the cluster doesn't support yet (for example `imagecache remove` needs a 3.6.3+ cluster).
 - VM Tools and CI/CD integrations are versioned independently of the release (on the 3.6 line, VM Tools stays at 3.6.0).
 
@@ -88,9 +88,9 @@ Orka does not change how you upgrade Kubernetes. Follow standard upgrade practic
 **Post-upgrade verification:**
 ```bash
 kubectl get nodes
-orka3 node list
+orka node list
 kubectl get pods
-orka3 vm deploy --image <IMAGE_NAME>
+orka vm deploy --image <IMAGE_NAME>
 curl <ORKA_API_URL>/api/v1/cluster-info   # Expect HTTP 200
 ```
 
@@ -162,8 +162,8 @@ aws codebuild start-build --project-name <PROJECT_NAME> \
 - AWS credentials no longer needed for artifact distribution (CloudFront public access)
 - cert-manager no longer auto-installed if already present in cluster
 
-### Post-upgrade (AWS)
-- Download and install the Orka 3.6 CLI
+### Post-upgrade (AWS, 3.5 to 3.6)
+- Download and install the Orka 3.6 CLI (`orka3`)
 - If your cluster uses a public NAT IP, update your API URL to use HTTPS:
   ```bash
   orka3 config set --api-url https://<YOUR_PUBLIC_URL>
@@ -174,33 +174,33 @@ aws codebuild start-build --project-name <PROJECT_NAME> \
 
 ## Upgrade Service (self-service, 3.6+)
 
-Orka 3.6.0 introduced Upgrade Service v1, which let MacStadium push upgrades to a cluster. As of the v1→v2 migration, Upgrade Service is self-service: you start, monitor, and review upgrades yourself from the `orka3` CLI, for both MSDC and Orka Anywhere clusters. It is not a scheduler or an auto-updater; it replaces manually sequencing service, agent, and node-component upgrades one at a time for a single planned run you start yourself.
+Orka 3.6.0 introduced Upgrade Service v1, which let MacStadium push upgrades to a cluster. As of the v1→v2 migration, Upgrade Service is self-service: you start, monitor, and review upgrades yourself from the `orka` CLI, for both MSDC and Orka Anywhere clusters. It is not a scheduler or an auto-updater; it replaces manually sequencing service, agent, and node-component upgrades one at a time for a single planned run you start yourself.
 
 **Before starting a run:**
 ```bash
-orka3 upgrade versions              # Current version + available releases
-orka3 upgrade service status        # Eligible nodes vs. live/seen agents
-orka3 upgrade service agents        # Per-node agent version, status, lease age
+orka upgrade versions              # Current version + available releases
+orka upgrade service status        # Eligible nodes vs. live/seen agents
+orka upgrade service agents        # Per-node agent version, status, lease age
 ```
-Resolve any node reporting `STALE` or `MISSING` before starting. `orka3 upgrade service agents` only lists nodes in one namespace (default `orka-default`), so run it with `-n <NAMESPACE>` for every namespace that has nodes.
+Resolve any node reporting `STALE` or `MISSING` before starting. `orka upgrade service agents` only lists nodes in one namespace (default `orka-default`), so run it with `-n <NAMESPACE>` for every namespace that has nodes.
 
 If these commands fail with `no matches for kind "ClusterUpgrade"`, the Upgrade Service isn't installed on the cluster. This is common on AWS-hosted Anywhere (see [AWS-hosted Anywhere](#orka-anywhere-upgrades-self-service-aws-hosted-or-on-premises) below).
 
 **Starting and monitoring a run:**
 ```bash
-orka3 upgrade run --version <VERSION>     # Admin access required
-orka3 upgrade run --version latest        # Resolves once at run creation, fixed for that run
-orka3 upgrade status                      # Most recent run
-orka3 upgrade status <RUN_NAME>
-orka3 upgrade history                     # Retained runs, newest first (10 max)
+orka upgrade run --version <VERSION>     # Admin access required
+orka upgrade run --version latest        # Resolves once at run creation, fixed for that run
+orka upgrade status                      # Most recent run
+orka upgrade status <RUN_NAME>
+orka upgrade history                     # Retained runs, newest first (10 max)
 ```
 All four commands support `-o json` for scripting.
 
-Pin an explicit version (`orka3 upgrade run --version <VERSION>`) in change tickets and runbooks rather than `latest`, so the ticket records exactly what was applied.
+Pin an explicit version (`orka upgrade run --version <VERSION>`) in change tickets and runbooks rather than `latest`, so the ticket records exactly what was applied.
 
 **How a run behaves:** validates the target release, upgrades Upgrade Service itself if needed, upgrades per-node agents, upgrades node components (canary node first, then a bounded rolling window), upgrades core control-plane components, then remaining Orka services. If a node upgrade fails, no new node work is released, in-flight work finishes, and the run is marked failed with the control plane left on its previous version, every node ends as succeeded/failed/skipped with a reason. Retrying a failed run means creating a new run at the same target; already-converged components are idempotent. There is no full-cluster rollback, and deleting a run does not cancel in-flight work.
 
-**Until a cluster completes its first successful v2 run**, `orka3 upgrade versions` reports its version as `unknown`. To check component versions before then, use `orka3 version` and `orka3 node list -o wide`.
+**Until a cluster completes its first successful v2 run**, `orka upgrade versions` reports its version as `unknown`. To check component versions before then, use `orka version` and `orka node list -o wide`.
 
 **Who can run what:** starting a run requires administrator access. `upgrade status`, `upgrade history`, and `upgrade versions` only need read access.
 
@@ -211,14 +211,14 @@ Pin an explicit version (`orka3 upgrade run --version <VERSION>`) in change tick
 
 ### Troubleshooting Upgrade Service runs
 
-- **Run stays `Pending`, then fails:** a run has up to 30 minutes to be admitted. Exceeding that usually means the target couldn't be resolved or another run was still active. Check `orka3 upgrade history`.
-- **Requested version not found or unavailable:** the release may be missing from the release index or temporarily quarantined. Check `orka3 upgrade versions`, then pick an available release or use `--version latest`.
+- **Run stays `Pending`, then fails:** a run has up to 30 minutes to be admitted. Exceeding that usually means the target couldn't be resolved or another run was still active. Check `orka upgrade history`.
+- **Requested version not found or unavailable:** the release may be missing from the release index or temporarily quarantined. Check `orka upgrade versions`, then pick an available release or use `--version latest`.
 - **Cluster already on the requested version:** not an error. Repeated run requests are safe because run names are timestamped and never collide.
-- **A node didn't upgrade:** run `orka3 upgrade service status`, then `orka3 upgrade service agents`. An agent that hasn't renewed its lease in 90 seconds reports `STALE`; one that has never been seen reports `MISSING`. Recover the agent, then start a new run.
-- **A node was skipped or its deadline expired:** read the skip reason in `orka3 upgrade status <RUN_NAME> -o json`. Common causes: no live agent, node already on the target version, node drained, or the node roster changed during the run.
+- **A node didn't upgrade:** run `orka upgrade service status`, then `orka upgrade service agents`. An agent that hasn't renewed its lease in 90 seconds reports `STALE`; one that has never been seen reports `MISSING`. Recover the agent, then start a new run.
+- **A node was skipped or its deadline expired:** read the skip reason in `orka upgrade status <RUN_NAME> -o json`. Common causes: no live agent, node already on the target version, node drained, or the node roster changed during the run.
 - **Failed runs can't be resumed.** Fix the cause and start a new run at the same target.
-- **Only the 10 most recent completed runs are retained.** Export `orka3 upgrade history` or a run's status first if you need long-term records.
-- **Escalating to support:** include the run name, target release, and the output of `orka3 upgrade status <RUN_NAME> -o json` and `orka3 upgrade service agents -o json`.
+- **Only the 10 most recent completed runs are retained.** Export `orka upgrade history` or a run's status first if you need long-term records.
+- **Escalating to support:** include the run name, target release, and the output of `orka upgrade status <RUN_NAME> -o json` and `orka upgrade service agents -o json`.
 
 ## Orka Anywhere upgrades (self-service, AWS-hosted or on-premises)
 
@@ -251,7 +251,7 @@ curl -fsSLO https://distribution.macstadium.com/orka-releases/helpers/migrate-up
 chmod +x migrate-upgrade-service.sh
 ./migrate-upgrade-service.sh          # latest release, or pass a version as the first arg
 ```
-Requires `kubectl` (admin context) and `jq`, plus outbound HTTPS to distribution.macstadium.com. Installs v2 CRDs, applies updated permissions, removes v1 leftovers, and waits up to 7 minutes for every node's upgrade agent to check in ("waiting for agent leases" messages during that window are expected). If your cluster's Mac node labels don't expose a standard `arm64` architecture label, set `ORKA_EXPECTED_AGENTS` to the actual node count first. Before running it, confirm the cluster's own v1→v2 self-upgrade already completed (`orka3 upgrade service status` should show an operator version starting `2.0.0-`), the script doesn't perform that step itself.
+Requires `kubectl` (admin context) and `jq`, plus outbound HTTPS to distribution.macstadium.com. Installs v2 CRDs, applies updated permissions, removes v1 leftovers, and waits up to 7 minutes for every node's upgrade agent to check in ("waiting for agent leases" messages during that window are expected). If your cluster's Mac node labels don't expose a standard `arm64` architecture label, set `ORKA_EXPECTED_AGENTS` to the actual node count first. Before running it, confirm the cluster's own v1→v2 self-upgrade already completed (`orka upgrade service status` should show an operator version starting `2.0.0-`), the script doesn't perform that step itself.
 
 **AWS-hosted Anywhere: fresh v2 install, not a migration.** Upgrade Service isn't present by default on AWS-hosted Anywhere, there's no v1 to migrate from. Install it via CodeBuild the same way as ARM node tooling, using the Ansible image tagged for your current version:
 ```bash

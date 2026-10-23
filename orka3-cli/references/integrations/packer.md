@@ -67,7 +67,7 @@ source "macstadium-orka" "image" {
 `orka_auth_token` must be a service account token. The config docs are explicit on this. User tokens expire in 1 hour.
 
 ```bash
-orka3 sa token <SERVICE_ACCOUNT_NAME>
+orka sa token <SERVICE_ACCOUNT_NAME>
 ```
 
 Pass via variable, not inline in the template:
@@ -83,7 +83,7 @@ variable "orka_auth_token" {
 `source_image` and `image_name` both accept OCI registry paths. To push the output to an OCI registry, the registry credentials must be configured first, in the builder VM's namespace (`orka_vm_builder_namespace`):
 
 ```bash
-echo -n "$REGISTRY_TOKEN" | orka3 regcred add https://ghcr.io --username "$REGISTRY_USER" --password-stdin -n <BUILDER_NS>
+echo -n "$REGISTRY_TOKEN" | orka regcred add https://ghcr.io --username "$REGISTRY_USER" --password-stdin -n <BUILDER_NS>
 ```
 
 Then set `image_name` to the full OCI path:
@@ -92,7 +92,7 @@ Then set `image_name` to the full OCI path:
 image_name = "ghcr.io/your-org/orka-images/custom-sonoma:v1.2"
 ```
 
-The plugin runs `sync` in the guest before creating the image, then waits for the push to finish (up to 1 hour in v3.1.2). If the build times out, check the push with `orka3 vm get-push-status <VM> -n <BUILDER_NS>`.
+The plugin runs `sync` in the guest before creating the image, then waits for the push to finish (up to 1 hour in v3.1.2). If the build times out, check the push with `orka vm get-push-status <VM> -n <BUILDER_NS>`.
 
 ## Dev toolkit examples
 

@@ -22,8 +22,8 @@ The integration tracks in-flight VM deployments to prevent over-provisioning whe
 ## Prerequisites
 
 - GitHub App for repo- or org-level runners. Instructions: `docs/github-app-setup-steps.md` in the repo. Alternatively, a classic PAT via `GITHUB_PAT` (v1.1.15+), which is required for enterprise-level runners (see [Auth](#auth)).
-- An Orka VM config created from a suitable base image: `orka3 vmc create <VM_CONFIGURATION_NAME> --image <IMAGE_NAME>`
-- A service account token: `orka3 sa token <SERVICE_ACCOUNT_NAME>`
+- An Orka VM config created from a suitable base image: `orka vmc create <VM_CONFIGURATION_NAME> --image <IMAGE_NAME>`
+- A service account token: `orka sa token <SERVICE_ACCOUNT_NAME>`
 - A machine with Docker and network access to the Orka cluster
 
 ## Configuration
@@ -87,14 +87,14 @@ docker run -v /path/to/.env:/.env ghcr.io/macstadium/orka-github-runner:<TAG>
 `ORKA_TOKEN` must be a service account token, not a user token. User tokens expire in 1 hour.
 
 ```bash
-orka3 sa token <SERVICE_ACCOUNT_NAME>
+orka sa token <SERVICE_ACCOUNT_NAME>
 ```
 
 For long-lived or non-expiring tokens:
 
 ```bash
-orka3 sa token <SERVICE_ACCOUNT_NAME> --duration 8760h   # 1 year
-orka3 sa token <SERVICE_ACCOUNT_NAME> --no-expiration
+orka sa token <SERVICE_ACCOUNT_NAME> --duration 8760h   # 1 year
+orka sa token <SERVICE_ACCOUNT_NAME> --no-expiration
 ```
 
 ### GitHub credentials: App or PAT
@@ -149,7 +149,7 @@ jobs:
 ## Gotchas
 
 - **App or classic PAT.** Use a GitHub App for repo/org runners, or a classic `GITHUB_PAT` (v1.1.15+, required for enterprise-level runners). Fine-grained PATs don't work.
-- **ORKA_VM_CONFIG must exist before the container starts.** Create it with `orka3 vmc create`.
+- **ORKA_VM_CONFIG must exist before the container starts.** Create it with `orka vmc create`.
 - **Node IP mapping.** If the container is outside the Orka network, set `ORKA_ENABLE_NODE_IP_MAPPING=true` and provide the mapping JSON.
 - **Orphaned VMs are cleaned up automatically.** VMs without a corresponding GitHub runner for two consecutive checks (`VM_TRACKER_INTERVAL`, default 300s) are deleted. Runner deregistration uses exponential backoff on failure.
 - **VM names are `<RUNNERS[].name>-<RANDOM>`.** There is no name prefix setting, so give scale sets a recognizable name if you filter or clean up VMs by name.
