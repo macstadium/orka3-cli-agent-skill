@@ -96,6 +96,8 @@ Orka 3.6 operator metrics are cluster-wide only. There are no per-namespace or p
 | `orka_operator_virtual_machine_failed_deployment_duration_seconds` | Histogram | Duration of failed deployments |
 | `orka_operator_virtual_machine_lifetime_seconds` | Histogram | VM lifetime, observed on failure or deletion |
 
+**Orka 4.0 changes:** the operator adds a `vm_namespace` label to its metrics and reports the pending-VM queue (`orka_operator_pending_virtual_machines`, VMs requested but not yet running, and `orka_operator_virtual_machine_queue_age_seconds`, the age of the oldest one), a leading indicator of deploy backlog. The deploy-duration histograms use exponential buckets, so percentiles are meaningful, and bucket series and VM lifetime metrics are in the Prometheus allowlist. `orka-webhooks` now exposes a metrics endpoint that Prometheus scrapes. Intel instance counts only matter on 3.6.
+
 Useful queries:
 
 ```promql

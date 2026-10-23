@@ -124,7 +124,7 @@ orka3 sa token sa-jenkins --no-expiration
 - A service account automatically has access to the namespace it was created in, and can't be moved to another namespace
 - Individual tokens can't be revoked; only `sa delete` revokes, and it revokes all of that account's tokens. Use one service account per consumer, and rotate by minting a new token on the same account
 - `sa list` doesn't show token expiry
-- New service accounts get developer (`orka-dev`) permissions in their namespace, not admin. There is no `orka3` command to add a user or service account to the `orka-admin` RoleBinding.
+- New service accounts get developer (`orka-dev`) permissions in their namespace, not admin. On Orka 3.6 there is no CLI command to add a user or service account to the `orka-admin` RoleBinding. On 4.0, `orka3 rbac add-subject --role admin` does it on clusters where you have cluster-level RBAC rights, but not on MacStadium-hosted clusters (see below).
 
 **Admin-privileged service accounts:**
 - **Self-managed and Orka Anywhere on-prem:** you have cluster-level RBAC rights. Elevate a service account by editing the `orka-admin` RoleBinding directly with `kubectl`. Elevate a user by adding them to the admin OIDC group or editing the same RoleBinding.
@@ -163,6 +163,10 @@ Every `orka3 rbac` command requires administrative privileges and a `--role`:
 
 - `--role dev` modifies the `orka-dev` rolebinding in a single namespace. Use `--namespace` to choose it; defaults to your default namespace.
 - `--role admin` is cluster-wide. Subjects are added to or removed from every rolebinding and cluster rolebinding granting the admin role to its OIDC group, so `--namespace` is not valid with `--role admin`.
+
+The default namespace for `--role dev` follows the usual resolution: `--namespace`, then `ORKA_DEFAULT_NAMESPACE`, then the `orka` kubeconfig context, then `orka-default`.
+
+**`--role admin` isn't available to administrators on MacStadium-hosted clusters.** The command runs with your own token, and on a hosted cluster your administrator permissions don't extend to the `orka-admin` RoleBinding or anything else in the `default` namespace. `--role dev` works normally. This is by design and unchanged from earlier releases. For an administrator-privileged service account on a hosted cluster, ask MacStadium support to enable the managed `orka-admin` service account, then mint its token with `orka3 sa token orka-admin`.
 
 ### orka3 rbac add-subject
 
@@ -217,7 +221,7 @@ orka3 rbac remove-subject --role dev --namespace orka-test --serviceaccount orka
 
 ## RBAC Commands (Rolebinding, deprecated in Orka 4.0)
 
-Deprecated as of Orka 4.0 in favour of `orka3 rbac ... --role dev`. They still work and behave the same. The `/api/v1/namespaces/{namespace}/rolebindings/orka-dev/subjects` routes are deprecated alongside them, replaced by `/api/v1/rbac`.
+Deprecated in Orka 4.0, in favor of `orka3 rbac ... --role dev`. They still work and behave the same, but on 4.0 they print `Command "rolebinding" is deprecated, use "orka rbac" with "--role dev" instead` to stderr and no longer appear in `--help`. Scripts that parse stderr will see the extra line. The `/api/v1/namespaces/{namespace}/rolebindings/orka-dev/subjects` routes are deprecated alongside them, replaced by `/api/v1/rbac`.
 
 | Deprecated | Replacement |
 |---|---|

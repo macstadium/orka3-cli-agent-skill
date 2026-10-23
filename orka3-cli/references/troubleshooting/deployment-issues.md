@@ -14,6 +14,8 @@ This guide covers common VM deployment issues with the Orka3 CLI.
 - [Problem: "Namespace has no nodes"](#problem-namespace-has-no-nodes)
 - [Problem: Tag required but no tagged nodes available](#problem-tag-required-but-no-tagged-nodes-available)
 - [Problem: Node can't be moved to another namespace](#problem-node-cant-be-moved-to-another-namespace)
+- [Problem: "Not enough disk space on node" (Orka 4.0)](#problem-not-enough-disk-space-on-node-orka-40)
+- [Problem: Intel image or setting rejected (Orka 4.0)](#problem-intel-image-or-setting-rejected-orka-40)
 - [VM Start Diagnostics (v3.6+)](#vm-start-diagnostics-v36)
 - [Log Sources for Deep Troubleshooting (v3.4+)](#log-sources-for-deep-troubleshooting-v34)
 
@@ -156,13 +158,13 @@ orka3 vm list <VM_NAME> --output wide
 # 2. Verify IP and ports are assigned
 # Look for IP address, SSH port, Screen Sharing port
 
-# 3. Check if this is an Intel VM that needs power on
+# 3. Check if this is an Intel VM that needs power on (Orka 3.6 and earlier)
 # Intel VMs may need explicit start command
 ```
 
 **Solutions:**
 ```bash
-# For Intel VMs - try power operations
+# For Intel VMs on Orka 3.6 and earlier - try power operations (removed in Orka 4.0)
 orka3 vm start <VM_NAME>
 
 # For Apple Silicon VMs - wait a few minutes for boot
@@ -293,6 +295,36 @@ If the tagged nodes show `READY` with free capacity, check for a cordoned node (
 - `cannot move node "<NODE>" to namespace "<NS>" because the node has running VMs. Please remove the VMs before attempting to move the node`
 
 **Solution:** Drain the node first: stop scheduling new work to it, wait for its VMs to finish or delete them, then run `orka3 node namespace`. See [node-commands.md](../commands/node-commands.md).
+
+## Problem: "Not enough disk space on node" (Orka 4.0)
+
+**Symptoms:**
+- Deploy fails with `Not enough disk space on node <NODE> to deploy the VM`, followed by the space the VM needs and the space available
+- The VM's pod records a `FailedCreate` event with the same error
+
+**Cause:** the node doesn't have room for the VM's disk. On 3.6 the same condition surfaced as `Unable to deploy the VM as the underlying VM process has crashed.` From 4.0, concurrent deploys and image pulls on a node also reserve the space they still need, so a node no longer runs out of disk mid-pull.
+
+**Solutions:**
+```bash
+# Deploy to another node, or let the scheduler pick one
+orka3 vm deploy --image <IMAGE> --node <OTHER_NODE>
+
+# Free disk on the node by removing cached images you no longer deploy
+orka3 ic remove <OLD_IMAGE> --nodes <NODE_NAME>
+```
+
+See node disk sizing in [scaling-workflows.md](../workflows/scaling-workflows.md).
+
+## Problem: Intel image or setting rejected (Orka 4.0)
+
+**Symptoms (Orka 4.0 and later):**
+- `Intel VMs are not supported as of Orka 4.0` when creating a VM or VM config, including with `kubectl apply`
+- `<FIELD> is not supported as of Orka 4.0, which no longer supports Intel VMs` (for `iso`, `systemSerial`, `gpuPassthrough`, or `legacyIO`), with HTTP `400` from the API
+- `Error: unknown flag: --iso` (or `--gpu`, `--system-serial`, `--disable-net-boost`, `--legacy-io`) from the CLI
+
+**Cause:** Orka 4.0 runs on Apple silicon only. The API and the admission webhook reject new objects that reference an amd64 image or turn on an Intel-only setting. `netBoost` is accepted with any value and ignored. Objects created on 3.6 can still be updated and deleted.
+
+**Solution:** Use an Apple silicon (arm64) image and drop the Intel-only setting. If you still need Intel VMs, keep that cluster on Orka 3.6 (supported through March 2028). See `references/commands/rest-api.md`.
 
 ## VM Start Diagnostics (v3.6+)
 

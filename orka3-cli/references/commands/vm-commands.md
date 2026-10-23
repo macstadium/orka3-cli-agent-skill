@@ -55,7 +55,9 @@ orka3 vm deploy [<NAME>] --config <TEMPLATE> [flags]
 - `--disable-net-boost` - Disable network performance boost
 - `--legacy-io` - Legacy IO, required for High Sierra and Mojave VMs
 
-Orka 4.0 is Apple Silicon only and removed every flag above. They return an unknown-flag error on 4.0. Orka 3.6 remains the last Intel-supporting release, with Intel support running through March 2028.
+Orka 4.0 is Apple Silicon only and removed every flag above from `vm deploy` and `vm-config create`. They return an unknown-flag error on 4.0 (`Error: unknown flag: --iso`). `--disable-vnc` stays. Orka 3.6 remains the last Intel-supporting release, with Intel support running through March 2028.
+
+On 4.0, `orka3 vm` and `orka3 image` also reject unknown subcommands with a non-zero exit code (`Error: unknown command "stop" for "orka vm"`). On 3.6, an unknown subcommand printed help and exited `0`, so a script still calling a removed command such as `vm stop` would have read it as success.
 
 **User Data (`--userdata`, Orka 4.0+):**
 - Requires Orka 4.0 or later and the Orka 4.0 orka-vm-tools in the image, which ship with this release.
@@ -65,7 +67,9 @@ Orka 4.0 is Apple Silicon only and removed every flag above. They return an unkn
 - No timeout by default. Set `ORKA_USERDATA_TIMEOUT` inside the image to add one.
 - Output goes to `/var/log/orka/userdata.log` inside the VM. Keep credentials out of it, and note that anything printed there travels with an image saved or pushed from that VM.
 - Changing User Data does not re-run the script on VMs that already ran it. Only newly deployed VMs pick up a new value.
-- Check progress with `orka3 vm list -o wide` and the `USERDATA-PHASE` column (`userdataPhase` in API responses): `pending`, `success`, `failed`, `skipped`, `timeout`. An empty value means the VM has no User Data or isn't running. Wait for any of the four terminal phases if automation needs a ready signal.
+- Check progress with `orka3 vm list -o wide` and the `USERDATA-PHASE` column (`userdataPhase` in API responses and CLI JSON): `pending`, `success`, `failed` (non-zero exit, check the log), `skipped` (the VM already ran the script on an earlier boot), `timeout` (only when `ORKA_USERDATA_TIMEOUT` is set). An empty value means the VM has no User Data or isn't running. Wait for any of the four terminal phases if automation needs a ready signal.
+- A VM deployed from an image saved or pushed after its own User Data ran still runs its own script: the run-once record is tied to the deployment, not the image. Exception: images carrying the VM Tools from the 3.7.0-alpha emulator preview tie the record to the image, so VMs deployed from them skip their User Data. Update those images to the 4.0 VM Tools first.
+- Orka never returns the script in API responses, but anyone with Kubernetes read access to the VM's `VirtualMachineInstance` resource or its pod can read it. If other users or service accounts can read pods in the namespace, prefer short-lived credentials (for example MDM enrollment invitations) or have the script pull secrets from your own secret store.
 - The phase is reported by the guest through VM Tools, so treat it as a progress signal rather than proof the work was done, and don't use it as a security control. Images with older VM Tools never report a result, which looks identical to a script still running.
 
 **VM Name Requirements:**
@@ -179,6 +183,7 @@ orka3 vm save <VM_NAME> <NEW_IMAGE_NAME> [--description '<DESC>'] [--namespace <
 - `-n, --namespace string` - Target namespace
 
 **Notes:**
+- **Deprecated in Orka 4.0** with NFS-hosted images. Still works, but prints a deprecation warning to stderr. Use `vm push` instead
 - Preserves original image
 - Async operation (check with `orka3 image list <NAME>`)
 - Restarts the VM
@@ -199,6 +204,7 @@ orka3 vm commit <VM_NAME> [--description '<DESC>'] [--namespace <NS>] [flags]
 - `-n, --namespace string` - Target namespace
 
 **Notes:**
+- **Deprecated in Orka 4.0** with NFS-hosted images. Still works, but prints a deprecation warning to stderr. Use `vm push` instead
 - Modifies original image
 - Intel: image must not be in use by other VMs
 - Async operation
@@ -268,17 +274,21 @@ Resize the disk of a running VM (increase only).
 
 **Syntax:**
 ```bash
-orka3 vm resize <VM_NAME> <NEW_SIZE_GB> [--user <SSH_USER>] [--password <SSH_PASS>] [--namespace <NS>] [flags]
+orka3 vm resize <VM_NAME> <NEW_SIZE_GB> [--namespace <NS>] [flags]
 ```
 
 **Options:**
-- `-u, --user string` - (Intel-only) SSH user for automatic repartition
-- `-p, --password string` - (Intel-only) SSH password for automatic repartition
 - `-n, --namespace string` - Target namespace
+
+**Intel-only options (Orka 3.6 and earlier, removed in Orka 4.0):**
+- `-u, --user string` - SSH user for automatic repartition
+- `-p, --password string` - SSH password for automatic repartition
+
+On 4.0 these flags return an unknown-flag error, and the API rejects `vmUser`/`vmPassword` with `400`. Resize on Apple Silicon works exactly as before.
 
 **Architecture Behavior:**
 - **Apple Silicon**: Requires Orka VM Tools installed in the guest, on the same release line as the cluster (3.x VM Tools on a 3.x cluster). With VM Tools present, Orka resizes and repartitions automatically
-- **Intel**: Provide SSH credentials for automatic repartition, or manually complete
+- **Intel (Orka 3.6 and earlier)**: Provide SSH credentials for automatic repartition, or manually complete
 
 **Notes:**
 - Size always in GB
@@ -288,7 +298,7 @@ orka3 vm resize <VM_NAME> <NEW_SIZE_GB> [--user <SSH_USER>] [--password <SSH_PAS
 **Examples:**
 ```bash
 orka3 vm resize my-vm 100
-orka3 vm resize intel-vm 100 --user admin --password admin
+orka3 vm resize intel-vm 100 --user admin --password admin   # Orka 3.6 Intel only; removed in 4.0
 ```
 
 ## orka3 vm start (Intel only, removed in Orka 4.0)

@@ -9,7 +9,7 @@ This guide covers common image-related issues with the Orka3 CLI.
 - [Problem: Deploys that used to be fast are slow again (cache eviction)](#problem-deploys-that-used-to-be-fast-are-slow-again-cache-eviction)
 - [Fixed in Orka 3.6.4: caching jobs could stall indefinitely](#fixed-in-orka-364-caching-jobs-could-stall-indefinitely)
 - [Problem: `imagecache remove` fails or isn't recognized despite an up-to-date CLI](#problem-imagecache-remove-fails-or-isnt-recognized-despite-an-up-to-date-cli)
-- [Known Issue: re-caching an image committed under the same name (v3.6.3+)](#known-issue-re-caching-an-image-committed-under-the-same-name-v363)
+- [Fixed in Orka 4.0: re-caching an image committed under the same name (v3.6.3+)](#fixed-in-orka-40-re-caching-an-image-committed-under-the-same-name-v363)
 - [Known Issue: in-place macOS 15.x and 26.x upgrades inside a VM fail](#known-issue-in-place-macos-15x-and-26x-upgrades-inside-a-vm-fail)
 - [Problem: "Invalid image format"](#problem-invalid-image-format)
 - [Problem: Image push fails (Apple Silicon)](#problem-image-push-fails-apple-silicon)
@@ -127,6 +127,8 @@ orka3 node list --output wide
 
 **Cause:** When a node is short on disk, deploying an uncached image there evicts the oldest cached images. Nothing reports the eviction; the next deploy of an evicted image is a cold pull.
 
+**Orka 4.0 changes:** eviction frees only the shortfall instead of the full required size, rejects the operation up front when evicting can't help (on 3.6 it could empty the cache and still reject), skips images an in-progress deployment is using (on 3.6 that failed the deploy with `The file "disk.img" couldn't be opened`), and counts space macOS reports late. Evicted images no longer linger as `Ready` in `imagecache` output. On 4.0 you should see far fewer surprise cold pulls, but re-cache the same way if you do.
+
 **Solutions:**
 ```bash
 # Re-cache the image on the affected nodes
@@ -168,9 +170,9 @@ Compare these against the [component version matrix](https://docs.macstadium.com
 
 If the cluster is on an earlier version, it needs a cluster upgrade (see `upgrade-workflows.md`), not a CLI reinstall.
 
-## Known Issue: re-caching an image committed under the same name (v3.6.3+)
+## Fixed in Orka 4.0: re-caching an image committed under the same name (v3.6.3+)
 
-**Status:** Open, no fix yet. Affects Orka 3.6.3 and later.
+**Status:** Fixed in Orka 4.0, where `imagecache add` re-caches the updated image on those nodes. Still affects Orka 3.6.3 and later 3.6 releases; use the workaround below on 3.6.
 
 **Symptoms:**
 - You commit changes to an existing image while keeping the same name/tag

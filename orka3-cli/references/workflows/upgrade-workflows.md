@@ -12,6 +12,16 @@ Self-service as of Orka 3.6+ via the Upgrade Service (v2), started and monitored
 5. After upgrade: download the new CLI version and regenerate service account tokens if this was a full version upgrade (or if the release notes require it)
 6. Update Orka VM Tools in custom golden images (`brew upgrade orka-vm-tools`) and republish them. Match the cluster's release line (3.x cluster, 3.x VM Tools). VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release, so a 3.6.4 cluster runs VM Tools 3.6.0. A VM Tools mismatch breaks disk resize and shared storage on Apple silicon.
 
+### Upgrading to Orka 4.0
+
+- **Orka 3.6 first.** Upgrading to 4.0.0 requires Orka 3.6. If the cluster runs an earlier version, upgrade to the latest 3.6 release first.
+- **No Intel worker nodes.** Orka 4.0 runs on Apple silicon only. The upgrade checks for Intel worker nodes and stops before making any changes (the pre-check reports `Orka 4.0 does not support Intel worker nodes; remove them first:` followed by the node names). Remove the Intel nodes first, or keep the cluster on Orka 3.6, which MacStadium supports through March 2028.
+- **Schedule it with support.** Contact [MacStadium support](mailto:support@macstadium.com) to schedule a 4.0 upgrade.
+- **Before the upgrade:** delete any PodDisruptionBudget of your own that selects `app: orka-webhooks` (4.0 creates its own; see [Kubernetes Upgrades](#kubernetes-upgrades)). Check scripts and pipelines for the removed Intel commands and flags and the deprecated NFS image commands (`references/commands/vm-commands.md`, `references/commands/image-commands.md`).
+- **After the upgrade:** install the 4.0 `orka` CLI (see the CLI section in `SKILL.md`), and update Orka VM Tools in golden images to 4.0 before relying on VM User Data. A 3.6 `osx_node_orka_quota_pod` override for emulators or cache jobs is no longer needed (see [Host node pod quota](#host-node-macos-upgrades-370-alpha)).
+
+Full list of changes: [Orka 4.0.0 release notes](https://docs.macstadium.com/orka/orka-upgrades-and-release-notes/orka-release-notes).
+
 ### Checking component versions
 
 A cluster's version is the release version, but its components are versioned separately, and a patch release only publishes new builds of the components it changed. Some components keep an earlier number. Example: a 3.6.4 cluster runs the API server and Orka Engine at 3.6.3, because neither changed in 3.6.4. That is not a failed upgrade.
@@ -69,6 +79,7 @@ Orka does not change how you upgrade Kubernetes. Follow standard upgrade practic
 **Webhooks PDB depends on the Orka version:**
 - **Orka 3.6 and earlier:** Orka doesn't create a Webhooks PDB. Add your own if you need the Webhooks available through the drain.
 - **Orka 4.0 and later:** Orka creates its own `orka-webhooks` PDB during install and upgrade. Don't add another. Two PDBs selecting the same pods make Kubernetes refuse to evict them, and the node drain hangs.
+- **Orka 4.0 also protects its HA control-plane components with PDBs.** On every cluster it reserves kubelet resources on control-plane nodes. On MacStadium-hosted clusters only, it also caps memory for login sessions on control-plane hosts, runs Orka components under dedicated PriorityClass tiers (kube-vip at `system-node-critical`), and sets per-component resource requests and limits. On AWS and on-prem clusters, Orka creates no priority classes (they're cluster-wide and could preempt your workloads) and leaves requests and limits empty for you to size.
 - **Before upgrading from 3.6 to 4.0:** your own Webhooks PDB stays in the cluster through the upgrade and collides with the one 4.0 adds. Find it and delete any PDB whose selector matches `app: orka-webhooks`:
   ```bash
   kubectl get pdb -A -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,SELECTOR:.spec.selector.matchLabels'
@@ -253,4 +264,12 @@ Orka can upgrade existing Apple silicon host nodes to macOS Tahoe (26) as of 3.7
 
 Multi-node host OS upgrades are throttled to avoid overloading the control plane on large clusters, and transient node-tooling failures during an upgrade now retry automatically instead of failing the whole run.
 
-**Per-node pod quota (3.7.0-alpha+):** each Apple silicon node advertises a pod quota to the Kubernetes scheduler, how many VM, emulator, and image-cache job pods it can run at once. Default is `4`, tunable via the `osx_node_orka_quota_pod` Ansible variable. If running Android emulators, plan for headroom: a node running two VMs and their two paired emulators is already at the default quota, leaving no room for an image-cache job until one finishes. Contact MacStadium support to have the quota raised for a cluster.
+**Per-node pod quota (Orka 3.6 and the 3.7.0-alpha):** each Apple silicon node advertises one shared pod quota to the Kubernetes scheduler, covering VM, emulator, and image-cache job pods. Default is `4`, tunable via the `osx_node_orka_quota_pod` Ansible variable. If running Android emulators, plan for headroom: a node running two VMs and their two paired emulators is already at the default quota, leaving no room for an image-cache job until one finishes. Contact MacStadium support to have the quota raised for a cluster.
+
+**Per-node limits on Orka 4.0:** the shared cap is gone.
+- Image-cache and push jobs have their own per-node budget, default `2`, tunable with the `osx_node_orka_quota_job` Ansible variable. They no longer compete with VMs or emulators.
+- The node pod quota (`osx_node_orka_quota_pod`) is `110`, the Kubernetes default, so it no longer limits VMs, emulators, and jobs together. VMs keep their own limit (2 per Apple silicon node).
+- Emulators aren't capped. They're counted per node, so `kubectl describe node` shows how many are running. Memory is the practical limit (see emulator sizing in `references/commands/emulator-commands.md`).
+- The Kubernetes scheduler places emulators on their paired VM's node. If it can't, for example because the node is cordoned, the emulator stays `Pending` with the scheduler's reason, and fails with `EmulatorUnschedulable` after 5 minutes.
+
+If you raised `osx_node_orka_quota_pod` on 3.6 to make room for emulators or cache jobs, you don't need that override on 4.0.
