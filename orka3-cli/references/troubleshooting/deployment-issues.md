@@ -4,12 +4,17 @@ This guide covers common VM deployment issues with the Orka3 CLI.
 
 ## Contents
 - [Quick Triage Checklist](#quick-triage-checklist)
-- [Problem: VM deployment fails with "Insufficient resources"](#problem-vm-deployment-fails-with-insufficient-resources)
+- [Problem: VM deployment fails for lack of CPU or memory](#problem-vm-deployment-fails-for-lack-of-cpu-or-memory)
+- [Problem: Apple silicon VM limit reached](#problem-apple-silicon-vm-limit-reached)
+- [Problem: Deploys fail on a node that shows READY with free capacity](#problem-deploys-fail-on-a-node-that-shows-ready-with-free-capacity)
 - [Problem: VM deployment succeeds but VM is unresponsive](#problem-vm-deployment-succeeds-but-vm-is-unresponsive)
 - [Problem: VM deployment fails with "Image not found"](#problem-vm-deployment-fails-with-image-not-found)
 - [Problem: VM name already exists](#problem-vm-name-already-exists)
+- [Problem: VM or config name is rejected](#problem-vm-or-config-name-is-rejected)
 - [Problem: "Namespace has no nodes"](#problem-namespace-has-no-nodes)
-- [Problem: "Tag required but no tagged nodes available"](#problem-tag-required-but-no-tagged-nodes-available)
+- [Problem: Tag required but no tagged nodes available](#problem-tag-required-but-no-tagged-nodes-available)
+- [Problem: Node can't be moved to another namespace](#problem-node-cant-be-moved-to-another-namespace)
+- [VM Start Diagnostics (v3.6+)](#vm-start-diagnostics-v36)
 - [Log Sources for Deep Troubleshooting (v3.4+)](#log-sources-for-deep-troubleshooting-v34)
 
 ## Quick Triage Checklist
@@ -51,11 +56,12 @@ orka3 node list -o wide              # Check Tags column for <TAG>
 orka3 vm deploy --image <IMAGE> -o json
 ```
 
-## Problem: VM deployment fails with "Insufficient resources"
+## Problem: VM deployment fails for lack of CPU or memory
 
 **Symptoms:**
-- "Not enough CPU available"
-- "Not enough memory available"
+- `Requested CPU is not available in the cluster`
+- `No available nodes with sufficient memory`
+- `The provided memory or CPU is greater than the maximum allowed.`
 - Deployment times out
 
 **Diagnosis:**
@@ -90,6 +96,50 @@ orka3 vm delete <UNUSED_VM>  # Clean up unused VMs
 # Option 5: Add more nodes to namespace (requires admin role)
 orka3 node namespace <ADDITIONAL_NODE> <YOUR_NAMESPACE>
 ```
+
+**Memory caps:** `--memory` can't exceed 32GB on 32GB nodes or 60GB on 64GB and 128GB nodes. Requests above the cap fail with `The provided memory or CPU is greater than the maximum allowed.`
+
+## Problem: Apple silicon VM limit reached
+
+**Symptoms:**
+- `The maximum supported number of Apple silicon VMs has been reached.`
+- `orka3 node list -o wide` shows free CPU and memory on the node, but the deploy still fails
+
+**Cause:** Apple's macOS EULA limits each Apple silicon node to 2 running VMs, regardless of free CPU or memory. Apple silicon capacity is counted in VM slots: 2 x the number of Apple silicon nodes in the namespace.
+
+**Solutions:**
+```bash
+# Count running VMs per node in the namespace
+orka3 vm list -n <NAMESPACE> -o wide
+
+# Free a slot by deleting finished or leaked VMs
+orka3 vm delete <UNUSED_VM> -n <NAMESPACE>
+
+# Add Apple silicon nodes to the namespace (requires admin role)
+orka3 node namespace <ADDITIONAL_NODE> <NAMESPACE>
+```
+
+Set CI concurrency limits at or below 2 x the Apple silicon nodes in the target namespace, so jobs queue in the CI system instead of failing at deploy.
+
+## Problem: Deploys fail on a node that shows READY with free capacity
+
+**Symptoms:**
+- `Cannot deploy to requested node "<NODE>". Make sure that the node is accessible and has sufficient available resources.`
+- `Cannot deploy with required tag "<TAG>". Verify that there are nodes with the tag that have enough available resources or deploy the VM without the required tag.`
+- `orka3 node list` shows the node as `READY` with free CPU and memory
+
+**Cause:** The node is cordoned in Kubernetes (`SchedulingDisabled`). `orka3 node list` doesn't show cordons, and the deploy error is generic. The real reason only appears in Kubernetes events as `N node(s) were unschedulable`.
+
+**Diagnosis (admins with kubectl access):**
+```bash
+# Cordoned nodes show SchedulingDisabled in the STATUS column
+kubectl get nodes
+
+# Scheduling failures for the namespace
+kubectl get events -n <NAMESPACE> --field-selector reason=FailedScheduling
+```
+
+**Solution:** Find out why the node was cordoned before reversing it. When it's safe, `kubectl uncordon <NODE_NAME>`.
 
 ## Problem: VM deployment succeeds but VM is unresponsive
 
@@ -133,8 +183,9 @@ orka3 vm deploy --image <VERIFIED_IMAGE>  # Use known-good image
 ## Problem: VM deployment fails with "Image not found"
 
 **Symptoms:**
-- "Image <n> not found"
-- "No such image"
+- `Failed to pull image due to image not found, is the name correct?` (OCI images)
+- `Failed to pull image due to being unauthorized (on some OCI registries/providers this may also mean image not found).`
+- "Image <IMAGE_NAME> not found" (local images)
 
 **Diagnosis:**
 ```bash
@@ -157,7 +208,7 @@ orka3 vm deploy --image ghcr.io/macstadium/orka-images/sonoma:latest
 
 # Check if image needs to be cached (Apple Silicon)
 orka3 ic add <OCI_IMAGE> --all
-orka3 ic info <OCI_IMAGE>  # Wait for 'ready' status
+orka3 ic info <OCI_IMAGE>  # Wait for 'Ready' status
 
 # For Intel - check if deprecated remote-image command was used
 # Use OCI registries instead
@@ -166,7 +217,7 @@ orka3 ic info <OCI_IMAGE>  # Wait for 'ready' status
 ## Problem: VM name already exists
 
 **Symptoms:**
-- "VM with name <n> already exists"
+- "VM with name <VM_NAME> already exists"
 - Name conflict error
 
 **Solutions:**
@@ -179,11 +230,24 @@ orka3 vm delete <VM_NAME>
 orka3 vm deploy <VM_NAME> --image <IMAGE>
 ```
 
+## Problem: VM or config name is rejected
+
+Orka 3.6 returns one of two messages, depending on which check the name fails first:
+
+- `a lowercase RFC 1123 subdomain must consist of ...`: the Kubernetes object-name check. Triggered by uppercase letters or `_`.
+- `VM name must consist of lower case alphanumeric characters or ' - ', start with an alphabetic character, ...` or `VM config name must be a valid DNS-1035 label. ...`: Orka's DNS-1035 check. Triggered by names that pass the first check but start with a digit, contain `.`, or exceed the length limit (63 characters for VMs, 50 for VM configs).
+
+**Solution:** Use lowercase letters, digits, and `-` only, start with a letter, and end with a letter or digit.
+
+```bash
+orka3 vm deploy ci-build --image <IMAGE> --generate-name
+```
+
 ## Problem: "Namespace has no nodes"
 
 **Symptoms:**
 - Cannot deploy VMs in namespace
-- "No nodes available in namespace"
+- ``No node in `READY` state is available to deploy to. Run `orka3 nodes list --namespace <NAMESPACE>` to check nodes state``
 
 **Diagnosis:**
 ```bash
@@ -200,10 +264,11 @@ orka3 node namespace <NODE_NAME> <TARGET_NAMESPACE>
 orka3 node list --namespace <TARGET_NAMESPACE>
 ```
 
-## Problem: "Tag required but no tagged nodes available"
+## Problem: Tag required but no tagged nodes available
 
 **Symptoms:**
-- Deployment fails with tag requirement error
+- `Required Tag "<TAG>" is not available. Verify that there are nodes with the tag that have enough available resources or deploy the VM without the required tag.`
+- `Cannot deploy with required tag "<TAG>". Verify that there are nodes with the tag that have enough available resources or deploy the VM without the required tag.`
 
 **Solutions:**
 ```bash
@@ -220,15 +285,49 @@ orka3 vm deploy --image <IMAGE> --tag <TAG> --tag-required=false
 orka3 vm deploy --image <IMAGE>
 ```
 
+If the tagged nodes show `READY` with free capacity, check for a cordoned node (see [Deploys fail on a node that shows READY with free capacity](#problem-deploys-fail-on-a-node-that-shows-ready-with-free-capacity)).
+
+## Problem: Node can't be moved to another namespace
+
+**Symptoms:**
+- `cannot move node "<NODE>" to namespace "<NS>" because the node has running VMs. Please remove the VMs before attempting to move the node`
+
+**Solution:** Drain the node first: stop scheduling new work to it, wait for its VMs to finish or delete them, then run `orka3 node namespace`. See [node-commands.md](../commands/node-commands.md).
+
 ## VM Start Diagnostics (v3.6+)
 
 In Orka 3.6+, VM start failures surface actionable error messages. Earlier versions returned empty messages for the same failures.
 
 **Common error types:**
-- **VZErrorDomain** — macOS Virtualization framework error, usually a hardware/image compatibility issue or resource exhaustion at the host level. Check `/opt/orka/logs/vm/` for the full error code.
-- **Configuration validation failures** — invalid disk size, unsupported CPU/memory combination, or missing image.
+- **VZErrorDomain**: macOS Virtualization framework error, usually a hardware/image compatibility issue or resource exhaustion at the host level. Check `/opt/orka/logs/vm/` for the full error code.
+- **Configuration validation failures**: invalid disk size, unsupported CPU/memory combination, or missing image.
 
 If you're on an older version and getting empty error messages on VM start failures, upgrading to 3.6 will surface the actual cause.
+
+### On-prem node diagnosis
+
+On Orka Anywhere on-prem clusters, a failed deploy often surfaces only as `Unable to deploy the VM as the underlying VM process has crashed.` The root cause is on the Mac node.
+
+```bash
+# 1. Find the failed VMI name in the operator logs
+kubectl logs -n default deployment/orka-operator --since=1h
+
+# 2. Find the node it landed on: look for "Successfully assigned <NS>/<VMI_NAME> to <NODE>"
+kubectl events -n <NAMESPACE>
+```
+
+Failed VMs are cleaned up automatically, so they won't appear in `orka3 vm list`. To troubleshoot, deploy manually to the suspect node with `orka3 vm deploy --image <IMAGE> --node <NODE_NAME>` and read the node logs (see the table below).
+
+**Node log signatures:**
+- `VZErrorDomain Code=-9 "The virtual machine encountered a security error."`: the VM user's login keychain is locked because a different user holds the foreground GUI session on the node. Check `ORKA_ENGINE_VIRTUAL_MACHINE_USER` in `/Library/LaunchDaemons/com.macstadium.orka-engine.server.managed.plist` and make sure that user is logged into the GUI.
+- `VM ... exited with code 9`: SIGKILL from the Virtual Kubelet. It appears on every VM delete, so it isn't a problem on its own. Read the log lines before it.
+
+**Raise the Virtual Kubelet log level** (default `error`): set `LOG_LEVEL` to `info` in `/Library/LaunchDaemons/orka.virtual.kubeletd.plist`, then reload the service:
+
+```bash
+sudo launchctl bootout system /Library/LaunchDaemons/orka.virtual.kubeletd.plist
+sudo launchctl bootstrap system /Library/LaunchDaemons/orka.virtual.kubeletd.plist
+```
 
 ## Log Sources for Deep Troubleshooting (v3.4+)
 

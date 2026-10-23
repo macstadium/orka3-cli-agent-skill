@@ -5,6 +5,8 @@ This guide covers VM scaling, disk management, and resource optimization.
 ## Contents
 - [Scaling VMs for Load Testing](#scaling-vms-for-load-testing)
 - [VM Disk Management Workflow](#vm-disk-management-workflow)
+- [Node Disk Sizing and Storage Usage](#node-disk-sizing-and-storage-usage)
+- [Apple Silicon Capacity (VM Slots)](#apple-silicon-capacity-vm-slots)
 - [Resource Optimization](#resource-optimization)
 - [Scheduler Options](#scheduler-options)
 - [Parallel VM Deployment Patterns](#parallel-vm-deployment-patterns)
@@ -28,6 +30,7 @@ orka3 node tag mini-arm-2 load-testing
 orka3 node tag mini-arm-3 load-testing
 
 # 3. Deploy multiple VMs with generated names
+#    (Apple silicon: at most 2 VMs per node, so 10 VMs need at least 5 nodes)
 for i in {1..10}; do
   orka3 vm deploy load-test --config load-test-vm --generate-name
 done
@@ -36,11 +39,11 @@ done
 orka3 vm list --output wide
 
 # 5. Get VM IPs for load testing script
-orka3 vm list -o json | jq -r '.items[] | select(.name | startswith("load-test")) | .ip'
+orka3 vm list -o json | jq -r '.[] | select(.name | startswith("load-test")) | .ip'
 
 # 6. After load testing, clean up all VMs
-orka3 vm list -o json | jq -r '.items[] | select(.name | startswith("load-test")) | .name' | \
-  while read vm; do orka3 vm delete $vm; done
+orka3 vm list -o json | jq -r '.[] | select(.name | startswith("load-test")) | .name' | \
+  while read vm; do orka3 vm delete "$vm"; done
 ```
 
 ## VM Disk Management Workflow
@@ -49,11 +52,13 @@ orka3 vm list -o json | jq -r '.items[] | select(.name | startswith("load-test")
 
 ### Apple Silicon - Simple resize
 
+Requires Orka VM Tools installed in the guest, on the same release line as the cluster (for example, 3.x VM Tools on a 3.x cluster). Without it, the disk isn't resized and repartitioned.
+
 ```bash
-# 1. Deploy VM
+# 1. Deploy VM (image must include Orka VM Tools)
 orka3 vm deploy my-vm --image sonoma-90gb --cpu 4
 
-# 2. Resize to 150GB (automatic)
+# 2. Resize to 150GB
 orka3 vm resize my-vm 150
 
 # 3. Verify resize (VM will restart)
@@ -83,6 +88,38 @@ orka3 vm delete intel-vm
 orka3 vm deploy --image ventura-150gb.img
 ```
 
+## Node Disk Sizing and Storage Usage
+
+**Orka doesn't check free host disk before placing a VM.** If a node runs out of disk under write load, guest writes can fail, and in some cases this has caused unrecoverable APFS corruption on the VM. Host-level disk monitoring and alerting aren't available yet. Source: [Resiliency, HA, and DR](https://docs.macstadium.com/orka/orka-resources/resiliency-high-availability-and-disaster-recovery).
+
+**Size from maximum, not current, usage.** A sparse image using 20 GB today can grow toward its full provisioned size (say 90 GB) under write load. Per node, add up:
+- the maximum provisioned size of every VM you expect to run there at once, and
+- every distinct image cached on that node.
+
+That total must fit comfortably under the node's usable disk. MacStadium's standard node sizing assumes at least 1 TB; on smaller nodes, redo the math.
+
+**Reclaim space:** on cluster 3.6.3+, remove cached images you no longer deploy with `orka3 imagecache remove` (see `image-commands.md`). On earlier versions, upgrade to get it.
+
+**Where to check storage usage** (the MacStadium Portal doesn't show Orka storage usage):
+- **Harbor OCI storage:** the project summary in the Harbor web UI shows usage against quota. Harbor also exposes Prometheus metrics on 3.5+ (ask support for the endpoint).
+- **Host disk:** scrape the per-node exporters with Prometheus (see `monitoring.md`).
+- **Primary NFS export** (VM images, ISOs, default shared VM storage): not exposed through the CLI, portal, or any customer-facing metrics endpoint. Open a support ticket for a usage report or a larger allocation.
+
+## Apple Silicon Capacity (VM Slots)
+
+Apple silicon nodes run at most 2 VMs each (Apple EULA), regardless of free CPU or memory. Plan Apple silicon capacity in VM slots: 2 x the `READY` Apple silicon nodes in the namespace.
+
+```bash
+# Total Apple silicon VM slots in a namespace
+orka3 node list -n <NAMESPACE> -o json | \
+  jq '[.[] | select(.architecture == "arm64" and .status == "READY")] | length * 2'
+
+# Apple silicon VMs currently running in the namespace
+orka3 vm list -n <NAMESPACE> -o json | jq '[.[] | select(.architecture == "arm64")] | length'
+```
+
+Size VM configs at about half of a node's allocatable CPU and memory, so two VMs fit on each node. A config that takes more than half leaves the second slot unusable.
+
 ## Resource Optimization
 
 **Monitor and optimize cluster resource usage:**
@@ -94,12 +131,11 @@ orka3 node list --output wide
 # 2. Identify underutilized nodes
 # Look for nodes with high available CPU/memory
 
-# 3. Check VM distribution
-orka3 vm list --output wide | awk '{print $NF}' | sort | uniq -c
+# 3. Check VM distribution (VMs per node)
+orka3 vm list -o json | jq -r 'group_by(.node)[] | "\(.[0].node) \(length)"'
 
-# 4. Identify over-provisioned VMs
-orka3 vm list --output wide | sort -k3 -nr  # Sort by CPU
-orka3 vm list --output wide | sort -k4 -nr  # Sort by memory
+# 4. Identify over-provisioned VMs (sorted by CPU, highest first)
+orka3 vm list -o json | jq -r 'sort_by(.cpu) | reverse | .[] | "\(.name) \(.cpu) CPU \(.memory)"'
 
 # 5. Right-size VM configs
 # Create smaller configs for less demanding workloads
@@ -161,11 +197,11 @@ done
 
 ```bash
 # All VMs
-orka3 vm list -o json | jq -r '.items[].ip'
+orka3 vm list -o json | jq -r '.[].ip'
 
 # Filtered by name prefix
-orka3 vm list -o json | jq -r '.items[] | select(.name | startswith("build")) | .ip'
+orka3 vm list -o json | jq -r '.[] | select(.name | startswith("build")) | .ip'
 
 # With name and IP
-orka3 vm list -o json | jq -r '.items[] | "\(.name) \(.ip)"'
+orka3 vm list -o json | jq -r '.[] | "\(.name) \(.ip)"'
 ```

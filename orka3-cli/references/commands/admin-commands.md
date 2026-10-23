@@ -30,8 +30,13 @@ orka3 namespace create <NAME> [--enable-custom-pods] [flags]
 - Unique to cluster
 
 **Post-Creation Steps:**
-1. Move nodes: `orka3 node namespace <NODE> <NAMESPACE>`
-2. Grant access: `orka3 rb add-subject --namespace <NS> --user <EMAIL>`
+1. Move nodes: `orka3 node namespace <NODE> <NAMESPACE>` (the command's help text points to `orka3 tag namespace`, which doesn't exist)
+2. Grant access: `orka3 rb add-subject --namespace <NS> --user <EMAIL>`. New namespaces bind only the admin group; developers have no access until added
+
+**Custom pods namespaces (`--enable-custom-pods`):**
+- Each pod needs the toleration `{"key":"orka.macstadium.com/namespace-reserved","value":"<NS>"}`
+- Custom pods can't run in `orka-default`
+- Apple silicon nodes can't be moved into these namespaces
 
 **Examples:**
 ```bash
@@ -43,7 +48,7 @@ orka3 namespace create orka-cp --enable-custom-pods
 
 ### orka3 namespace list
 
-List all namespaces.
+List all namespaces. Admin only.
 
 **Syntax:**
 ```bash
@@ -112,6 +117,19 @@ orka3 sa token sa-jenkins
 orka3 sa token sa-jenkins --duration 1h
 orka3 sa token sa-jenkins --no-expiration
 ```
+
+**Notes:**
+- The returned token's lifetime may be shorter or longer than `--duration`
+- `--duration` and `--no-expiration` are mutually exclusive. Use `--no-expiration` on EKS, where the control plane caps token lifetime
+- A service account automatically has access to the namespace it was created in, and can't be moved to another namespace
+- Individual tokens can't be revoked; only `sa delete` revokes, and it revokes all of that account's tokens. Use one service account per consumer, and rotate by minting a new token on the same account
+- `sa list` doesn't show token expiry
+- New service accounts get developer (`orka-dev`) permissions in their namespace, not admin. There is no `orka3` command to add a user or service account to the `orka-admin` RoleBinding.
+
+**Admin-privileged service accounts:**
+- **Self-managed and Orka Anywhere on-prem:** you have cluster-level RBAC rights. Elevate a service account by editing the `orka-admin` RoleBinding directly with `kubectl`. Elevate a user by adding them to the admin OIDC group or editing the same RoleBinding.
+- **MacStadium-hosted clusters:** customer admins can't modify the `orka-admin` RoleBinding or anything else in the `default` namespace. This is expected. For an admin service account (for example, to automate custom TLS certificate uploads to `/api/v1/upload/cert`), ask MacStadium support to enable the managed `orka-admin` service account. After that, any of your admins can mint a token with `orka3 sa token orka-admin`. No credentials are handed over.
+- An `orka-admin` token can also create and delete service accounts, mint their tokens, and read or update registry credentials. Store it like any admin credential. If it's exposed, invalidate it by deleting and recreating the service account.
 
 ### orka3 serviceaccount list (alias: sa)
 
@@ -248,8 +266,12 @@ orka3 rolebinding list-subjects [--namespace <NS>] [--output <FORMAT>] [flags]
 ```bash
 orka3 rb list-subjects
 orka3 rb list-subjects --namespace orka-test
-orka3 rb list-subjects | grep 'ServiceAccount'
+orka3 rb list-subjects -o json | jq '.[] | select(.kind=="ServiceAccount")'
 ```
+
+**Notes:**
+- `-o json` returns `[{"kind": "User"|"Group"|"ServiceAccount", "name": ...}]`. Service account subjects are named `<NS>:<SA>`
+- `orka-default` carries the groups `oidc:Administrator` and `oidc:Technical` by default
 
 ### orka3 rolebinding remove-subject (alias: rb)
 

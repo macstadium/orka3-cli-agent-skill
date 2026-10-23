@@ -29,8 +29,11 @@ orka3 image list [<NAME>] [--output <FORMAT>] [flags]
 orka3 image list
 orka3 image list sonoma-90gb-orka3-arm
 orka3 image list --output json
-orka3 image list --arch amd64
 ```
+
+**Notes:**
+- `-o json` includes `state` (`Ready`, `Updating`, `Failed`) and `error`
+- Image names: up to 63 characters, lowercase alphanumerics, `-` or `.`
 
 ### orka3 image copy
 
@@ -121,8 +124,15 @@ orka3 ic add sonoma:latest --tags jenkins-builds
 - Async operation
 - Image must be pulled first (or be an OCI image)
 - `--nodes`, `--tags`, and `--all` are mutually exclusive
+- An OCI reference without a tag means `:latest`
+- Before 3.5.1, `imagecache add` into a custom namespace silently did nothing
+- Each cache job uses about 0.5 CPU and heavy disk I/O, which slows running VMs and the scheduler. Caching several images at once is faster than one after another
 
-### orka3 imagecache remove (alias: ic) — v3.6.3+
+**Cache behavior:**
+- First deploy of an uncached image on a node takes about 4 minutes; a cached deploy takes about 5 seconds
+- When node disk is short, deploying an uncached image evicts the oldest cached images
+
+### orka3 imagecache remove (alias: ic), v3.6.3+
 
 Selectively remove a cached image from Apple Silicon nodes without support intervention.
 
@@ -149,14 +159,16 @@ orka3 ic remove sonoma:latest --tags jenkins-builds
 | State | Meaning |
 |-------|---------|
 | `Removing` | Remove job is running on the target node |
-| `Failed` | Remove job failed; image stays cached. Retry with the same command. |
+| `RemoveFailed` | Remove job failed; image stays cached. Retry with the same command. |
 
 **Notes:**
-- Async — check status with `orka3 imagecache info <IMAGE>`
+- Async: check status with `orka3 imagecache info <IMAGE>`
 - `--nodes`, `--tags`, and `--all` are mutually exclusive; exactly one is required
 - `--tags` matches nodes that have ALL listed tags
 - If the image is not cached on a targeted node, the operation completes without error
 - If a targeted node no longer exists, the cache entry is cleaned up immediately
+- Images cached implicitly by a deploy can be removed the same way
+- Never remove an image while VMs are deploying from it on that node. Removal between pull and clone fails the deploy with a generic error
 - API: `POST /api/v1/namespaces/{namespace}/cache/images/{image}/remove` (207 Multi-Status)
 
 ### orka3 imagecache info (alias: ic)
@@ -173,8 +185,11 @@ orka3 imagecache info <IMAGE> [--namespace <NS>] [--output <FORMAT>] [flags]
 - `-n, --namespace string` - Target namespace
 
 **Status Values:**
-- `ready` - Available for deployment
-- `caching` - Operation still active
+- `Ready` - Available for deployment
+- `Caching` - Cache job still running
+- `Failed` - Cache job failed
+- `Removing` - Remove job running (v3.6.3+)
+- `RemoveFailed` - Remove job failed; image stays cached (v3.6.3+)
 
 ### orka3 imagecache list (alias: ic)
 

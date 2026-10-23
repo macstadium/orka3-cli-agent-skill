@@ -9,6 +9,7 @@ This guide covers common authentication and access control issues with the Orka3
 - [Problem: "Forbidden" or "Insufficient permissions"](#problem-forbidden-or-insufficient-permissions)
 - [Problem: Cannot create namespace / admin commands fail](#problem-cannot-create-namespace--admin-commands-fail)
 - [Problem: Service account token not working](#problem-service-account-token-not-working)
+- [Testing a service account token without replacing your login](#testing-a-service-account-token-without-replacing-your-login)
 - [Best Practices for Authentication](#best-practices-for-authentication)
 
 ## Token Expiration Reference
@@ -51,6 +52,9 @@ orka3 node list
 - Connection timeout
 - "Connection refused" errors
 - "No route to host"
+- `dial tcp <IP>:6443: i/o timeout`
+
+The CLI needs two network paths to the cluster: the Orka API (HTTP, for example `http://10.221.188.20`) and the Kubernetes API (TCP 6443). A VPN or tunnel that allows only one of them gives `dial tcp ...:6443: i/o timeout` on commands that use the Kubernetes API, even when the Orka API responds.
 
 **Diagnosis:**
 ```bash
@@ -78,7 +82,10 @@ orka3 config set --api-url https://company.orka.app  # Domain
 # 2. Ensure VPN is connected
 # Check your VPN client
 
-# 3. Contact MacStadium support if issues persist
+# 3. If you see "dial tcp ...:6443: i/o timeout", ask your network admin to
+#    allow TCP 6443 to the cluster over the VPN or tunnel
+
+# 4. Contact MacStadium support if issues persist
 ```
 
 ## Problem: "Forbidden" or "Insufficient permissions"
@@ -89,8 +96,9 @@ orka3 config set --api-url https://company.orka.app  # Domain
 
 **Diagnosis:**
 ```bash
-# Check which namespaces you have access to
-orka3 namespace list
+# Check whether you have access to a namespace
+# (Forbidden means no access; `orka3 namespace list` is admin-only)
+orka3 vm list --namespace <NAMESPACE>
 
 # Try operations in orka-default (all users have access)
 orka3 vm list --namespace orka-default
@@ -129,12 +137,14 @@ Only admin users can perform certain operations:
 # These operations require the Orka admin role.
 # Admin role is assigned at the cluster level by MacStadium during provisioning.
 # To check if you have admin access:
-orka3 namespace list    # Admins see all namespaces; non-admins see only granted ones
+orka3 namespace list    # Admin-only: succeeds for admins, Forbidden for everyone else
 
 # If you need admin access:
 # - Contact MacStadium support (support@macstadium.com) to modify role assignments
 # - Or have an existing admin delegate specific tasks via service accounts
 ```
+
+**Service account gets Forbidden on an admin-only task (hosted clusters):** service accounts created with `orka3 sa create` get developer permissions, and on MacStadium-hosted clusters customer admins can't edit the `orka-admin` RoleBinding. Ask MacStadium support to enable the managed `orka-admin` service account, then mint its token with `orka3 sa token orka-admin`. On self-managed clusters, edit the `orka-admin` RoleBinding directly instead. See `references/commands/admin-commands.md`.
 
 ## Problem: Service account token not working
 
@@ -163,6 +173,19 @@ orka3 sa token <SA_NAME> --no-expiration
 orka3 sa create <SA_NAME> --namespace <NAMESPACE>
 orka3 sa token <SA_NAME> --namespace <NAMESPACE>
 ```
+
+## Testing a service account token without replacing your login
+
+`orka3 user set-token` writes the token into your kubeconfig, replacing your own login. To test a service account token, point the CLI at a throwaway kubeconfig:
+
+```bash
+SA_KUBECONFIG=$(mktemp)
+KUBECONFIG="$SA_KUBECONFIG" orka3 user set-token "$SA_TOKEN"
+KUBECONFIG="$SA_KUBECONFIG" orka3 vm list --namespace <NAMESPACE>   # runs as the service account
+orka3 vm list --namespace <NAMESPACE>                                # still runs as you
+```
+
+`user set-token` takes the token as a positional argument, so it's visible in `ps` output while the command runs. Use single-tenant CI runners.
 
 ## Best Practices for Authentication
 

@@ -32,7 +32,73 @@ Commands use `orka3`. The proposed `orka3` to `orka` rename (OK-6390) is not imp
 - `references/commands/emulator-commands.md` documented `--device`, `--cpu` and `--memory` on `orka3 emulator deploy`, and a `--vm` filter on `orka3 emulator list`. The CLI has never accepted any of them, including in 3.7.0-alpha. Removed, with a note so they don't get reintroduced.
 - Noted that the CLI's JSON output uses `relayIp` while the API returns `relayIP`. Both are correct for their own surface and should not be normalised to each other.
 
-## [1.4.0] - 2026-08-24
+## [Unreleased] - 1.6.0
+
+Ports Orka 3.x documentation changes from docs.macstadium.com (September to October 2026). Version tables, compatibility data, and known-issue lists are summarized with a link to the docs page instead of copied in full.
+
+### Added
+
+- `upgrade-workflows.md`: "Checking component versions" (`orka3 version` fields, `orka3 node list -o wide` `VERSION`/`RUNTIME`, `--client`, patch releases only bump changed components, link to the component matrix) and the on-prem `orka-ansible-onprem:3.6.4` installer re-pull note
+- `image-workflows.md`: "macOS Guest Compatibility" summary (macOS 27 Golden Gate needs a 26.6.2+ host and more than 2 GB of RAM, macOS 27 isn't signed off as a host OS, `latest` on MacStadium images means latest published), hardened image tagging and pre-caching, VM Tools needs macOS 13+
+- `image-issues.md`: known issue for in-place macOS 15.x and 26.x upgrades inside a VM, with the memory check and the installer workaround
+- `admin-commands.md`, `auth-issues.md`: hosted-cluster admin limits and the managed `orka-admin` service account (`orka3 sa token orka-admin`)
+- `migration-workflows.md`: NFS-to-OCI migration with Harbor, including CI/CD repointing
+- `scaling-workflows.md`: node disk sizing from maximum provisioned size, and where to check storage usage
+- `config-commands.md`: `config set --api-url` doesn't change the kubeconfig `server` entry; `orka3 version` output fields and `--client`
+- `rest-api.md`: Android emulator REST endpoints (3.7.0-alpha)
+- `emulator-commands.md`: `google_apis_playstore` images reject ADB (`device unauthorized`)
+- `SKILL.md`: Essential Context bullets for component versions and macOS guest rules; reference table entries updated
+
+### Changed
+
+- Placeholders in command examples are `<UPPER_SNAKE>` matching orka3 help (for example `<SERVICE_ACCOUNT_NAME>`, `<VM_CONFIGURATION_NAME>`, `<ORKA_API_URL>`)
+- "IP plan" references now say My Cloud
+
+### Fixed
+
+- `image-commands.md`: removed the `orka3 image list --arch amd64` example; `image list` has no `--arch` flag (drift check, skill PR #19)
+- `emulator-commands.md`: the device-profile example no longer uses a Play Store image
+
+## [1.5.0] - 2026-10-06
+
+Folds in verified findings from Robert Elwell's Orka agent playbooks, which were tested against a live Orka 3.6.3 cluster. Every item was checked against the Orka 3.6 CLI help, the Orka source, the public docs, or the integration repos before inclusion.
+
+### Added
+
+- `references/commands/rest-api.md`: Swagger UI, bearer auth with service-account tokens, endpoint paths, the `items` list wrapper, `customMetadata` on deploy, save/commit/push request bodies
+- `references/integrations/jenkins.md`: Orka by MacStadium plugin (v2.10) cloud and agent template fields, retention strategies, permanent agents, logging
+- `references/workflows/monitoring.md`: node exporter and operator scrape targets, Orka operator metric names (3.6), macOS vs Linux memory metrics, alerts for disk-driven cache eviction and CI backlog
+- `references/workflows/burst-workflows.md`: Orka Burst (3.3+) through the Portal API, with drain-before-disable ordering
+- `SKILL.md`: Apple silicon 2-VM-per-node limit and slot-based capacity, Orka 3.6 as the last Intel release, bare-array `-o json` shape
+- `vm-commands.md`: VM metadata server, `vm push` status values (`Ready`/`Failed`) and `-n`, guest `sync` before push/save/commit, save/commit require NFS image storage, display flag ranges, memory caps, `owner` in `vm list -o json`, deploy returns before macOS finishes booting
+- `image-commands.md`, `image-issues.md`: cache timing and eviction, cache job cost, never remove a cache during a deploy, pre-3.5.1 custom-namespace caching bug, `Unauthorized` on push with a certificate-only kubeconfig
+- `vm-config-commands.md`: configs always live in `orka-default`, no update command (blue/green rollout), half-node sizing
+- `node-commands.md`, `admin-workflows.md`: `node namespace` is refused while VMs run (drain first), Apple silicon can't join custom-pods namespaces, cordoned nodes still show READY
+- `admin-commands.md`: service-account token lifetime and revocation details, custom-pods toleration, `rb list-subjects` JSON shape
+- `deployment-issues.md`: real 3.6 error strings, 2-VM limit error, cordoned-node symptom, RFC 1123 vs DNS-1035 name errors, on-prem node diagnosis
+- `cicd-workflows.md`: CI concurrency at or below slot capacity, trap-based VM cleanup, leaked-VM cleanup by owner/prefix/age, integration smoke test
+- `github-actions.md`: `GITHUB_PAT` (v1.1.15), `ORKA_NAMESPACE`, `MAX_RUNNERS`, tracker and deregistration settings, runner metric names
+- `gitlab.md`, `buildkite.md`, `packer.md`: missing settings, defaults, and concurrency guidance
+
+### Fixed
+
+- TeamCity: plugin 2.0.1 installs from the JetBrains Marketplace (no `./gradlew build`), authenticates only with a service account token (no email/password), and the profile has Namespace and Node mappings fields; added the first-ARM-deploy timeout known issue
+- Namespace resolution: `orka3 user login` and `orka3 user set-token` reset the `orka` context namespace to `orka-default`, so `ORKA_DEFAULT_NAMESPACE` is the lasting default; the precedence order applies only to `vm`, `node`, `imagecache`, `registrycredential`, `rolebinding`, `serviceaccount`; `orka3 upgrade service` always defaults to `orka-default`
+- `monitoring.md`: added the Orka server metrics target at `/api/v1/metrics` (GET check, HEAD returns 404)
+- VM Tools version guidance: match the cluster's release line, not its exact version (a 3.6.4 cluster runs VM Tools 3.6.0)
+- Android emulator commands: `--platform` and `--image-type` are required with no defaults, the device flag is `--device-profile`, `emulator list` has no `--vm` filter, and connection details are `RELAY-IP`/`RELAY-PORT` (`relayIp`/`relayPort`), not `adbRelayIP`/`adbRelayPort`
+- `-o json` examples: `.[]` and `.[0].name`, not `.items[]` or `.name`
+- `orka3 vmc create` examples no longer pass `--namespace` (the flag doesn't exist)
+- `orka3 regcred remove <SERVER>`, not `regcred delete <NAME>`; `--password-stdin` instead of `--password`
+- Imagecache states are `Ready`, `Caching`, `Failed`, `Removing`, `RemoveFailed`
+- Apple silicon `vm resize` needs Orka VM Tools in the guest; it isn't automatic
+- `orka3 namespace list` is admin-only
+- Packer: `packer_push_timeout` isn't in plugin v3.1.2; debug flags are `no_delete_vm`/`no_create_image`
+- GitHub Actions: classic PATs are supported; private keys must be PKCS#1 RSA; `GITHUB_API_URL` is ignored
+- GitLab: the SSH key must be the contents of the `ORKA_SSH_KEY_FILE` CI/CD variable; a mounted key file is ignored, and it can't be masked because it's multi-line
+- Removed `grep`, `awk`, and `sort` pipes on CLI output in favor of built-in filtering or `-o json | jq`
+
+## [1.4.0] - 2026-09-11
 
 ### Added
 
@@ -41,10 +107,21 @@ Commands use `orka3`. The proposed `orka3` to `orka` rename (OK-6390) is not imp
 - `references/troubleshooting/image-issues.md`: "Fixed in Orka 3.6.4" section covering the caching-job deadline fix (`cache_job_active_deadline_seconds`), the 3.6.3 cache-eviction regression fix, and the `--enable-custom-pods` role binding fix; new "Known Issue" section for the open 3.6.3+ re-caching bug (same-name image commits skipping re-cache) with workaround
 - `references/troubleshooting/auth-issues.md`: note on the 3.6.4 fix for missing `orka-dev` role bindings on `--enable-custom-pods` namespaces, and manual remediation via MacStadium support for namespaces created before the fix
 - `references/commands/admin-commands.md`: cross-reference note on the same `--enable-custom-pods` role binding fix under `orka3 namespace create`
+- `references/workflows/upgrade-workflows.md`: real Upgrade Service v2 self-service command flow (`orka3 upgrade run/status/history/versions`, `orka3 upgrade service status/agents`), replacing the stale v1 "MacStadium pushes upgrades" description
+- `references/workflows/upgrade-workflows.md`: new "Orka Anywhere upgrades (self-service, AWS-hosted or on-premises)" section — Ansible-based idempotent re-upgrade process, `osx_node_orka_engine_version`/`osx_node_orka_vk_version` version-pin vars, and the v1→v2 Upgrade Service migration script for Anywhere clusters
+- `references/workflows/upgrade-workflows.md`: new "Host node macOS upgrades (3.7.0-alpha+)" section — macOS Tahoe host node upgrade support and the tunable per-node pod quota (`osx_node_orka_quota_pod`, default `4`)
+- `SKILL.md`: Essential Context bullets for the pod quota/Tahoe upgrade facts and the self-service (not support-ticket-only) upgrade model for both MSDC and Orka Anywhere
+- `references/troubleshooting/image-issues.md`: new "Problem: `imagecache remove` fails or isn't recognized despite an up-to-date CLI" entry — this is a cluster-side version gate (3.6.3+), not a CLI one, a real, repeated customer point of confusion
+- `references/workflows/upgrade-workflows.md`: Upgrade Service troubleshooting (30-minute admission limit, quarantined releases, `STALE` after 90 seconds without a lease renewal, skip reasons in `upgrade status -o json`), read-only access for status/history/versions, and availability by deployment
+- `references/workflows/upgrade-workflows.md`: Webhooks PodDisruptionBudget guidance for 3.6 vs. 4.0, including deleting a custom `app: orka-webhooks` PDB before upgrading to 4.0
+- `references/workflows/upgrade-workflows.md`: warning not to pin `osx_node_orka_engine_version` to the release version on-prem (`official/3.6.4` returns HTTP 403 on every node)
 
 ### Fixed
 
 - `orka3-cli/SKILL.md`: replaced content that had silently regressed to the pre-PR#5 format (stale "Current Version: 3.5.2" banner, verbose prose) in commit `2205675`; rebuilt from the actively-maintained rewrite so it matches the reference files, which had continued to receive updates through 3.6.3 independently of `SKILL.md`
+- `SKILL.md`: corrected "Orka Cluster Upgrades" framing, upgrades are self-service via the CLI as of 3.6+ Upgrade Service v2, not support-ticket-initiated only
+- `references/troubleshooting/image-issues.md`: the `imagecache remove` entry now checks cluster version with `orka3 version` and `orka3 node list -o wide`, since `orka3 upgrade versions` reports `unknown` before the first Upgrade Service v2 run
+- `SKILL.md`: the "Claude Code" execution-context bullet now names Gemini CLI too and generalizes to "execution-capable agent," matching the skill's own documented multi-agent compatibility (see README)
 
 ## [1.3.0] - 2026-07-14
 
