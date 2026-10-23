@@ -205,7 +205,7 @@ orka regcred remove <SERVER>              # SERVER includes scheme, e.g. https:/
 
 ### Output & Flags
 - `-o, --output`: `table` (default) | `wide` | `json`
-- `-n, --namespace`: target namespace (default: `orka-default`)
+- `-n, --namespace`: target namespace (default: resolved as described under Namespace resolution, usually `orka-default`)
 - `--generate-name`: auto-generate VM name
 - Aliases: `vm-config`→`vmc` `serviceaccount`→`sa` `registrycredential`→`regcred` `imagecache`→`ic` `emulator`→`emu` `emulator-config`→`emc` (4.0) `rolebinding`→`rb` (deprecated in 4.0)
 
