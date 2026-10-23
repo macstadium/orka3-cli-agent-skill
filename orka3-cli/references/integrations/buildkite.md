@@ -19,8 +19,8 @@ A Docker container (the proxy agent) intercepts Buildkite jobs and, instead of r
 1. Create a base image with:
    - SSH enabled with private key (no passphrase)
    - Buildkite agent installed (`brew install buildkite/buildkite/buildkite-agent`)
-2. Save the image: `orka3 vm save <VM_NAME> <NEW_IMAGE_NAME>`
-3. Create a VM config from it: `orka3 vmc create <VM_CONFIGURATION_NAME> --image <NEW_IMAGE_NAME>`
+2. Save the image: `orka vm save <VM_NAME> <NEW_IMAGE_NAME>`
+3. Create a VM config from it: `orka vmc create <VM_CONFIGURATION_NAME> --image <NEW_IMAGE_NAME>`
 4. Build the Docker image from the [Dockerfile](https://github.com/macstadium/orka-integrations/blob/master/Buildkite/Dockerfile). To pin the Buildkite agent base image, pass `--build-arg BASE_VERSION=<VERSION>` (the upstream doc says `--build-args`, which is a typo):
 
 ```bash
@@ -55,7 +55,7 @@ Install the Buildkite agent directly on a long-lived Orka VM. No proxy container
 `ORKA_TOKEN` must be a service account token. User tokens expire in 1 hour.
 
 ```bash
-orka3 sa token <SERVICE_ACCOUNT_NAME>
+orka sa token <SERVICE_ACCOUNT_NAME>
 ```
 
 ## Environment variables
@@ -96,6 +96,6 @@ If Orka node IPs are private and the proxy container connects over a public IP, 
 - **Buildkite agent must be installed on the VM image,** not just the proxy container. The proxy delegates the actual job to the VM.
 - **SSH keys must have no passphrase.** The proxy agent cannot handle passphrase-protected keys.
 - **Mount all SSH keys in one volume** at `/buildkite-secrets`. This includes both the Orka VM key and any repo access keys.
-- **VM config must exist before the container starts.** Create it with `orka3 vmc create`.
+- **VM config must exist before the container starts.** Create it with `orka vmc create`.
 - **No VPN required for the Buildkite server to reach Orka.** Traffic is initiated from the agent side. VPN is only needed for the proxy container to reach the Orka endpoint.
 - **Integration error strings** (`Invalid ip`, `Invalid port`, `Waited 30 seconds for sshd to start`) come from the proxy's bootstrap script. See the integration's docs in the [repo](https://github.com/macstadium/orka-integrations/tree/master/Buildkite) rather than restating them.

@@ -16,7 +16,7 @@ This guide covers enabling, draining, and disabling Orka Burst capacity, and aut
 Orka Burst (Orka 3.3+) adds contracted, on-demand nodes to a cluster, billed only while enabled. MacStadium sets it up once in a maintenance window (contact your sales team). After that, admins toggle it from the MacStadium Admin Portal or the Portal GraphQL API. Burst nodes are typically ready within about 15 minutes of enabling.
 
 - Only portal admins can enable or disable burst.
-- Burst nodes can't be managed directly in Kubernetes, but you can tag them and move them between Orka namespaces with `orka3`.
+- Burst nodes can't be managed directly in Kubernetes, but you can tag them and move them between Orka namespaces with `orka`.
 - Burst has no knowledge of running workloads. Disabling it while VMs run on burst nodes kills those jobs.
 
 ## Portal API token
@@ -73,13 +73,13 @@ curl -X POST https://portal.macstadium.com/graphql \
 Then wait for the burst nodes to show `READY`:
 
 ```bash
-orka3 node list -n <BURST_NAMESPACE> -o wide
+orka node list -n <BURST_NAMESPACE> -o wide
 ```
 
 Tag burst nodes so monitoring can separate them from fixed capacity (tags appear as Kubernetes node labels, visible through the `kube_node_labels` metric if you run kube-state-metrics) and so you can route burst-tolerant jobs to them:
 
 ```bash
-orka3 node tag <BURST_NODE> burst -n <BURST_NAMESPACE>
+orka node tag <BURST_NODE> burst -n <BURST_NAMESPACE>
 ```
 
 ## Drain and disable burst
@@ -90,15 +90,15 @@ Drain first, always. Plan disables for low-utilization windows and tell the team
 2. **Wait for or delete the VMs on the burst nodes.** Check by node in the namespace the burst nodes are in:
 
    ```bash
-   orka3 vm list -n <BURST_NAMESPACE> -o json \
+   orka vm list -n <BURST_NAMESPACE> -o json \
      | jq -r --arg node "<BURST_NODE>" '.[] | select(.node == $node) | .name'
    ```
 
    Repeat until the output is empty for every burst node. Let jobs finish, or delete their VMs deliberately.
-3. **Then move or release the nodes.** If burst nodes share a namespace with permanent nodes, move them to a separate namespace (`orka3 node namespace` is refused while VMs run on the node, which is why draining comes first):
+3. **Then move or release the nodes.** If burst nodes share a namespace with permanent nodes, move them to a separate namespace (`orka node namespace` is refused while VMs run on the node, which is why draining comes first):
 
    ```bash
-   orka3 node namespace <BURST_NODE> --namespace <CURRENT_NAMESPACE> <HOLDING_NAMESPACE>
+   orka node namespace <BURST_NODE> --namespace <CURRENT_NAMESPACE> <HOLDING_NAMESPACE>
    ```
 
 4. **Disable burst** after confirming `canUpdate: true`:
@@ -127,7 +127,7 @@ See [monitoring.md](monitoring.md) for the backlog alert and burst node labeling
 
 ## Gotchas
 
-- **Two different tokens.** The Portal token toggles burst; Orka service account tokens drive `orka3`. Neither works in place of the other.
+- **Two different tokens.** The Portal token toggles burst; Orka service account tokens drive `orka`. Neither works in place of the other.
 - **`id`, not `displayId`.** Mutations fail with the human-readable name.
 - **Consumption data isn't in the API.** `burstLastTime` shows when the state last changed. For usage against prepaid credit, ask your CSM (support@macstadium.com).
 - **API stability.** These operations are stable and supported, but the broader Portal API has no formal versioning commitment yet. Keep the queries in one place.

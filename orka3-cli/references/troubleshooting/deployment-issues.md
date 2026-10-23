@@ -1,6 +1,6 @@
 # VM Deployment Troubleshooting
 
-This guide covers common VM deployment issues with the Orka3 CLI.
+This guide covers common VM deployment issues with the Orka CLI.
 
 ## Contents
 - [Quick Triage Checklist](#quick-triage-checklist)
@@ -14,6 +14,8 @@ This guide covers common VM deployment issues with the Orka3 CLI.
 - [Problem: "Namespace has no nodes"](#problem-namespace-has-no-nodes)
 - [Problem: Tag required but no tagged nodes available](#problem-tag-required-but-no-tagged-nodes-available)
 - [Problem: Node can't be moved to another namespace](#problem-node-cant-be-moved-to-another-namespace)
+- [Problem: "Not enough disk space on node" (Orka 4.0)](#problem-not-enough-disk-space-on-node-orka-40)
+- [Problem: Intel image or setting rejected (Orka 4.0)](#problem-intel-image-or-setting-rejected-orka-40)
 - [VM Start Diagnostics (v3.6+)](#vm-start-diagnostics-v36)
 - [Log Sources for Deep Troubleshooting (v3.4+)](#log-sources-for-deep-troubleshooting-v34)
 
@@ -21,7 +23,7 @@ This guide covers common VM deployment issues with the Orka3 CLI.
 
 ```bash
 # 1. Check node resources
-orka3 node list --output wide
+orka node list --output wide
 
 # Look for:
 # - Available CPU/memory
@@ -29,31 +31,31 @@ orka3 node list --output wide
 # - Existing VM count
 
 # 2. Check if image exists and is ready
-orka3 image list <IMAGE_NAME> --output wide
+orka image list <IMAGE_NAME> --output wide
 
 # For OCI images, verify caching status
-orka3 ic info <OCI_IMAGE>
+orka ic info <OCI_IMAGE>
 
 # 3. Verify namespace has resources
-orka3 node list --namespace <YOUR_NAMESPACE>
+orka node list --namespace <YOUR_NAMESPACE>
 
 # 4. Check for VM name conflicts
-orka3 vm list <VM_NAME>
+orka vm list <VM_NAME>
 
 # 5. Try deployment with longer timeout
-orka3 vm deploy --image <IMAGE> --timeout 20
+orka vm deploy --image <IMAGE> --timeout 20
 
 # 6. Try deployment on specific node
-orka3 vm deploy --image <IMAGE> --node <NODE_NAME>
+orka vm deploy --image <IMAGE> --node <NODE_NAME>
 
 # 7. Check if VM config exists
-orka3 vmc list <CONFIG_NAME> --output wide
+orka vmc list <CONFIG_NAME> --output wide
 
 # 8. If tag-required is set, verify tagged nodes exist
-orka3 node list -o wide              # Check Tags column for <TAG>
+orka node list -o wide              # Check Tags column for <TAG>
 
 # 9. Try with JSON output for detailed error messages
-orka3 vm deploy --image <IMAGE> -o json
+orka vm deploy --image <IMAGE> -o json
 ```
 
 ## Problem: VM deployment fails for lack of CPU or memory
@@ -67,34 +69,34 @@ orka3 vm deploy --image <IMAGE> -o json
 **Diagnosis:**
 ```bash
 # 1. Check node resources
-orka3 node list --output wide
+orka node list --output wide
 
 # Look for available CPU and memory
 
 # 2. Check current VM usage
-orka3 vm list --output wide
+orka vm list --output wide
 
 # 3. Check if namespace has any nodes
-orka3 node list --namespace <YOUR_NAMESPACE>
+orka node list --namespace <YOUR_NAMESPACE>
 ```
 
 **Solutions:**
 ```bash
 # Option 1: Reduce VM resource requirements
-orka3 vm deploy --image <IMAGE> --cpu 3 --memory 6  # Smaller resources
+orka vm deploy --image <IMAGE> --cpu 3 --memory 6  # Smaller resources
 
 # Option 2: Deploy to specific node with resources
-orka3 node list --output wide  # Find node with resources
-orka3 vm deploy --image <IMAGE> --node <NODE_WITH_RESOURCES>
+orka node list --output wide  # Find node with resources
+orka vm deploy --image <IMAGE> --node <NODE_WITH_RESOURCES>
 
 # Option 3: Remove tag-required if using tagged deployment
-orka3 vm deploy --image <IMAGE> --tag <TAG> --tag-required=false
+orka vm deploy --image <IMAGE> --tag <TAG> --tag-required=false
 
 # Option 4: Wait for resources to free up
-orka3 vm delete <UNUSED_VM>  # Clean up unused VMs
+orka vm delete <UNUSED_VM>  # Clean up unused VMs
 
 # Option 5: Add more nodes to namespace (requires admin role)
-orka3 node namespace <ADDITIONAL_NODE> <YOUR_NAMESPACE>
+orka node namespace <ADDITIONAL_NODE> <YOUR_NAMESPACE>
 ```
 
 **Memory caps:** `--memory` can't exceed 32GB on 32GB nodes or 60GB on 64GB and 128GB nodes. Requests above the cap fail with `The provided memory or CPU is greater than the maximum allowed.`
@@ -103,20 +105,20 @@ orka3 node namespace <ADDITIONAL_NODE> <YOUR_NAMESPACE>
 
 **Symptoms:**
 - `The maximum supported number of Apple silicon VMs has been reached.`
-- `orka3 node list -o wide` shows free CPU and memory on the node, but the deploy still fails
+- `orka node list -o wide` shows free CPU and memory on the node, but the deploy still fails
 
 **Cause:** Apple's macOS EULA limits each Apple silicon node to 2 running VMs, regardless of free CPU or memory. Apple silicon capacity is counted in VM slots: 2 x the number of Apple silicon nodes in the namespace.
 
 **Solutions:**
 ```bash
 # Count running VMs per node in the namespace
-orka3 vm list -n <NAMESPACE> -o wide
+orka vm list -n <NAMESPACE> -o wide
 
 # Free a slot by deleting finished or leaked VMs
-orka3 vm delete <UNUSED_VM> -n <NAMESPACE>
+orka vm delete <UNUSED_VM> -n <NAMESPACE>
 
 # Add Apple silicon nodes to the namespace (requires admin role)
-orka3 node namespace <ADDITIONAL_NODE> <NAMESPACE>
+orka node namespace <ADDITIONAL_NODE> <NAMESPACE>
 ```
 
 Set CI concurrency limits at or below 2 x the Apple silicon nodes in the target namespace, so jobs queue in the CI system instead of failing at deploy.
@@ -126,9 +128,9 @@ Set CI concurrency limits at or below 2 x the Apple silicon nodes in the target 
 **Symptoms:**
 - `Cannot deploy to requested node "<NODE>". Make sure that the node is accessible and has sufficient available resources.`
 - `Cannot deploy with required tag "<TAG>". Verify that there are nodes with the tag that have enough available resources or deploy the VM without the required tag.`
-- `orka3 node list` shows the node as `READY` with free CPU and memory
+- `orka node list` shows the node as `READY` with free CPU and memory
 
-**Cause:** The node is cordoned in Kubernetes (`SchedulingDisabled`). `orka3 node list` doesn't show cordons, and the deploy error is generic. The real reason only appears in Kubernetes events as `N node(s) were unschedulable`.
+**Cause:** The node is cordoned in Kubernetes (`SchedulingDisabled`). `orka node list` doesn't show cordons, and the deploy error is generic. The real reason only appears in Kubernetes events as `N node(s) were unschedulable`.
 
 **Diagnosis (admins with kubectl access):**
 ```bash
@@ -151,18 +153,18 @@ kubectl get events -n <NAMESPACE> --field-selector reason=FailedScheduling
 **Diagnosis:**
 ```bash
 # 1. Check VM status
-orka3 vm list <VM_NAME> --output wide
+orka vm list <VM_NAME> --output wide
 
 # 2. Verify IP and ports are assigned
 # Look for IP address, SSH port, Screen Sharing port
 
-# 3. Check if this is an Intel VM that needs power on
+# 3. Check if this is an Intel VM that needs power on (Orka 3.6 and earlier)
 # Intel VMs may need explicit start command
 ```
 
 **Solutions:**
 ```bash
-# For Intel VMs - try power operations
+# For Intel VMs on Orka 3.6 and earlier - try power operations (removed in Orka 4.0)
 orka3 vm start <VM_NAME>
 
 # For Apple Silicon VMs - wait a few minutes for boot
@@ -176,8 +178,8 @@ orka3 vm start <VM_NAME>
 # come pre-configured with SSH and Screen Sharing
 
 # If VM is still unresponsive:
-orka3 vm delete <VM_NAME>
-orka3 vm deploy --image <VERIFIED_IMAGE>  # Use known-good image
+orka vm delete <VM_NAME>
+orka vm deploy --image <VERIFIED_IMAGE>  # Use known-good image
 ```
 
 ## Problem: VM deployment fails with "Image not found"
@@ -190,10 +192,10 @@ orka3 vm deploy --image <VERIFIED_IMAGE>  # Use known-good image
 **Diagnosis:**
 ```bash
 # 1. List available local images
-orka3 image list
+orka image list
 
 # 2. Check if it's an OCI image
-orka3 ic list  # Check cached OCI images
+orka ic list  # Check cached OCI images
 
 # 3. Verify image name spelling
 ```
@@ -201,14 +203,14 @@ orka3 ic list  # Check cached OCI images
 **Solutions:**
 ```bash
 # For local images - verify exact name
-orka3 image list <IMAGE_NAME>
+orka image list <IMAGE_NAME>
 
 # For OCI images - ensure full path with registry
-orka3 vm deploy --image ghcr.io/macstadium/orka-images/sonoma:latest
+orka vm deploy --image ghcr.io/macstadium/orka-images/sonoma:latest
 
 # Check if image needs to be cached (Apple Silicon)
-orka3 ic add <OCI_IMAGE> --all
-orka3 ic info <OCI_IMAGE>  # Wait for 'Ready' status
+orka ic add <OCI_IMAGE> --all
+orka ic info <OCI_IMAGE>  # Wait for 'Ready' status
 
 # For Intel - check if deprecated remote-image command was used
 # Use OCI registries instead
@@ -223,11 +225,11 @@ orka3 ic info <OCI_IMAGE>  # Wait for 'Ready' status
 **Solutions:**
 ```bash
 # Use --generate-name for a unique suffix (recommended)
-orka3 vm deploy my-vm --image <IMAGE> --generate-name
+orka vm deploy my-vm --image <IMAGE> --generate-name
 
 # Or delete the existing VM first
-orka3 vm delete <VM_NAME>
-orka3 vm deploy <VM_NAME> --image <IMAGE>
+orka vm delete <VM_NAME>
+orka vm deploy <VM_NAME> --image <IMAGE>
 ```
 
 ## Problem: VM or config name is rejected
@@ -240,28 +242,28 @@ Orka 3.6 returns one of two messages, depending on which check the name fails fi
 **Solution:** Use lowercase letters, digits, and `-` only, start with a letter, and end with a letter or digit.
 
 ```bash
-orka3 vm deploy ci-build --image <IMAGE> --generate-name
+orka vm deploy ci-build --image <IMAGE> --generate-name
 ```
 
 ## Problem: "Namespace has no nodes"
 
 **Symptoms:**
 - Cannot deploy VMs in namespace
-- ``No node in `READY` state is available to deploy to. Run `orka3 nodes list --namespace <NAMESPACE>` to check nodes state``
+- ``No node in `READY` state is available to deploy to. Run `orka nodes list --namespace <NAMESPACE>` to check nodes state``
 
 **Diagnosis:**
 ```bash
 # Check nodes in namespace
-orka3 node list --namespace <NAMESPACE>
+orka node list --namespace <NAMESPACE>
 ```
 
 **Solutions:**
 ```bash
 # Move nodes to namespace (requires admin role)
-orka3 node namespace <NODE_NAME> <TARGET_NAMESPACE>
+orka node namespace <NODE_NAME> <TARGET_NAMESPACE>
 
 # Verify nodes appear
-orka3 node list --namespace <TARGET_NAMESPACE>
+orka node list --namespace <TARGET_NAMESPACE>
 ```
 
 ## Problem: Tag required but no tagged nodes available
@@ -273,16 +275,16 @@ orka3 node list --namespace <TARGET_NAMESPACE>
 **Solutions:**
 ```bash
 # Check if tagged nodes exist
-orka3 node list -o wide              # Check Tags column for <TAG>
+orka node list -o wide              # Check Tags column for <TAG>
 
 # Option 1: Tag a node (requires admin role)
-orka3 node tag <NODE> <TAG>
+orka node tag <NODE> <TAG>
 
 # Option 2: Deploy without strict tag requirement
-orka3 vm deploy --image <IMAGE> --tag <TAG> --tag-required=false
+orka vm deploy --image <IMAGE> --tag <TAG> --tag-required=false
 
 # Option 3: Deploy without tag
-orka3 vm deploy --image <IMAGE>
+orka vm deploy --image <IMAGE>
 ```
 
 If the tagged nodes show `READY` with free capacity, check for a cordoned node (see [Deploys fail on a node that shows READY with free capacity](#problem-deploys-fail-on-a-node-that-shows-ready-with-free-capacity)).
@@ -292,7 +294,37 @@ If the tagged nodes show `READY` with free capacity, check for a cordoned node (
 **Symptoms:**
 - `cannot move node "<NODE>" to namespace "<NS>" because the node has running VMs. Please remove the VMs before attempting to move the node`
 
-**Solution:** Drain the node first: stop scheduling new work to it, wait for its VMs to finish or delete them, then run `orka3 node namespace`. See [node-commands.md](../commands/node-commands.md).
+**Solution:** Drain the node first: stop scheduling new work to it, wait for its VMs to finish or delete them, then run `orka node namespace`. See [node-commands.md](../commands/node-commands.md).
+
+## Problem: "Not enough disk space on node" (Orka 4.0)
+
+**Symptoms:**
+- Deploy fails with `Not enough disk space on node <NODE> to deploy the VM`, followed by the space the VM needs and the space available
+- The VM's pod records a `FailedCreate` event with the same error
+
+**Cause:** the node doesn't have room for the VM's disk. On 3.6 the same condition surfaced as `Unable to deploy the VM as the underlying VM process has crashed.` From 4.0, concurrent deploys and image pulls on a node also reserve the space they still need, so a node no longer runs out of disk mid-pull.
+
+**Solutions:**
+```bash
+# Deploy to another node, or let the scheduler pick one
+orka vm deploy --image <IMAGE> --node <OTHER_NODE>
+
+# Free disk on the node by removing cached images you no longer deploy
+orka ic remove <OLD_IMAGE> --nodes <NODE_NAME>
+```
+
+See node disk sizing in [scaling-workflows.md](../workflows/scaling-workflows.md).
+
+## Problem: Intel image or setting rejected (Orka 4.0)
+
+**Symptoms (Orka 4.0 and later):**
+- `Intel VMs are not supported as of Orka 4.0` when creating a VM or VM config, including with `kubectl apply`
+- `<FIELD> is not supported as of Orka 4.0, which no longer supports Intel VMs` (for `iso`, `systemSerial`, `gpuPassthrough`, or `legacyIO`), with HTTP `400` from the API
+- `Error: unknown flag: --iso` (or `--gpu`, `--system-serial`, `--disable-net-boost`, `--legacy-io`) from the CLI
+
+**Cause:** Orka 4.0 runs on Apple silicon only. The API and the admission webhook reject new objects that reference an amd64 image or turn on an Intel-only setting. `netBoost` is accepted with any value and ignored. Objects created on 3.6 can still be updated and deleted.
+
+**Solution:** Use an Apple silicon (arm64) image and drop the Intel-only setting. If you still need Intel VMs, keep that cluster on Orka 3.6 (supported through March 2028). See `references/commands/rest-api.md`.
 
 ## VM Start Diagnostics (v3.6+)
 
@@ -316,7 +348,7 @@ kubectl logs -n default deployment/orka-operator --since=1h
 kubectl events -n <NAMESPACE>
 ```
 
-Failed VMs are cleaned up automatically, so they won't appear in `orka3 vm list`. To troubleshoot, deploy manually to the suspect node with `orka3 vm deploy --image <IMAGE> --node <NODE_NAME>` and read the node logs (see the table below).
+Failed VMs are cleaned up automatically, so they won't appear in `orka vm list`. To troubleshoot, deploy manually to the suspect node with `orka vm deploy --image <IMAGE> --node <NODE_NAME>` and read the node logs (see the table below).
 
 **Node log signatures:**
 - `VZErrorDomain Code=-9 "The virtual machine encountered a security error."`: the VM user's login keychain is locked because a different user holds the foreground GUI session on the node. Check `ORKA_ENGINE_VIRTUAL_MACHINE_USER` in `/Library/LaunchDaemons/com.macstadium.orka-engine.server.managed.plist` and make sure that user is logged into the GUI.

@@ -100,17 +100,17 @@ Re-run Ansible to apply changes.
 
 ## First-Time Per-Host Disk Initialization
 
-After enabling shared disk and provisioning a host, the guest-visible shared disk arrives **unformatted**. You must format it once per host — subsequent VMs on that host auto-mount at `/Volumes/shared` with no additional setup.
+After enabling shared disk and provisioning a host, the guest-visible shared disk arrives **unformatted**. You must format it once per host. Subsequent VMs on that host auto-mount at `/Volumes/shared` with no additional setup.
 
 This applies to **both AWS and on-prem** deployments.
 
 ```bash
 # 1. Deploy a VM on the host
-orka3 vm deploy init-vm --image <IMAGE> --node <HOST_NODE>
+orka vm deploy init-vm --image <IMAGE> --node <HOST_NODE>
 
 # 2. In the guest, find the unformatted disk
 diskutil list internal physical
-# Look for an unformatted disk (no partition scheme) — note its identifier (e.g., disk1)
+# Look for an unformatted disk (no partition scheme): note its identifier (e.g., disk1)
 
 # 3. Format the disk (JHFS+ for macOS compatibility)
 diskutil eraseDisk -noEFI JHFS+ shared /dev/<DISK_IDENTIFIER>
@@ -119,10 +119,10 @@ diskutil eraseDisk -noEFI JHFS+ shared /dev/<DISK_IDENTIFIER>
 ls /Volumes/shared
 
 # 5. Clean up init VM
-orka3 vm delete init-vm
+orka vm delete init-vm
 ```
 
-Once formatted, the disk **persists across host reboots** — this is a one-time operation per host. All future VMs deployed on that host will auto-mount the shared disk at `/Volumes/shared`.
+Once formatted, the disk **persists across host reboots**. This is a one-time operation per host. All future VMs deployed on that host will auto-mount the shared disk at `/Volumes/shared`.
 
 ## Requirements Checklist
 
@@ -145,7 +145,7 @@ Before enabling shared attached disks, verify:
 
 If shared disk is enabled, only one VM can run per Apple Silicon node. To run multiple VMs:
 - Disable the shared disk feature, OR
-- Use Intel nodes for multi-VM scenarios
+- Use Intel nodes for multi-VM scenarios (Orka 3.6 and earlier; Orka 4.0 has no Intel nodes)
 
 ### Configuration Changes Not Taking Effect
 
