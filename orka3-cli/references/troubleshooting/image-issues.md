@@ -7,6 +7,7 @@ This guide covers common image-related issues with the Orka3 CLI.
 - [Problem: Cannot delete image (in use)](#problem-cannot-delete-image-in-use)
 - [Problem: Image cache not working (Apple Silicon)](#problem-image-cache-not-working-apple-silicon)
 - [Fixed in Orka 3.6.4: caching jobs could stall indefinitely](#fixed-in-orka-364-caching-jobs-could-stall-indefinitely)
+- [Problem: `imagecache remove` fails or isn't recognized despite an up-to-date CLI](#problem-imagecache-remove-fails-or-isnt-recognized-despite-an-up-to-date-cli)
 - [Known Issue: re-caching an image committed under the same name (v3.6.3+)](#known-issue-re-caching-an-image-committed-under-the-same-name-v363)
 - [Problem: "Invalid image format"](#problem-invalid-image-format)
 - [Problem: Image push fails (Apple Silicon)](#problem-image-push-fails-apple-silicon)
@@ -121,6 +122,23 @@ Three caching-related bugs were fixed in Orka 3.6.4. If you're on an earlier ver
 
 **Namespaces created with `orka3 namespace create --enable-custom-pods` didn't grant the `orka-dev` role binding to users added to the namespace afterward,** leaving them without dev-level access.
 - **Fixed:** Namespaces created on 3.6.4+ are unaffected. Existing custom-pods namespaces created before upgrading do **not** resolve automatically — contact [MacStadium support](mailto:support@macstadium.com) to have the missing role binding applied. See also `references/troubleshooting/auth-issues.md`.
+
+## Problem: `imagecache remove` fails or isn't recognized despite an up-to-date CLI
+
+**Symptoms:**
+- `orka3 imagecache remove` errors out or behaves as if the command doesn't exist
+- CLI is confirmed current (3.6.3+), but the command still doesn't work
+
+**Cause:** `imagecache remove` is a server-side feature gate, not a CLI feature gate. It requires the Orka **cluster** to be running 3.6.3 or later (early access in 3.6.2), separate from the `orka3` CLI version. Updating only the local CLI does not enable it, a common point of confusion: several customers have hit this assuming a CLI update alone was sufficient.
+
+**Solution:** confirm the cluster's version, not just the CLI's:
+```bash
+orka3 version             # API Version, Operator Version
+orka3 node list -o wide   # VERSION = Virtual Kubelet, RUNTIME = Orka Engine
+```
+Compare these against the [component version matrix](https://docs.macstadium.com/orka/orka-upgrades-and-release-notes/orka-component-versions). A patch release only bumps the components it changed, so some components report an earlier number than the release (a 3.6.4 cluster runs the API server at 3.6.3). Don't rely on `orka3 upgrade versions` for this: it reports `unknown` until the cluster completes its first Upgrade Service v2 run.
+
+If the cluster is on an earlier version, it needs a cluster upgrade (see `upgrade-workflows.md`), not a CLI reinstall.
 
 ## Known Issue: re-caching an image committed under the same name (v3.6.3+)
 
