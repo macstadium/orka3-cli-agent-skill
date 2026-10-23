@@ -1,6 +1,6 @@
 # Upgrade Workflows Reference
 
-## Orka Cluster Upgrades (MSDC — MacStadium Data Centers)
+## Orka Cluster Upgrades (MSDC, MacStadium Data Centers)
 
 Self-service as of Orka 3.6+ via the Upgrade Service (v2), started and monitored from the `orka` CLI. See [Upgrade Service (self-service, 3.6+)](#upgrade-service-self-service-36) below for the full command flow. Only fall back to a MacStadium support ticket if the cluster hasn't completed its v1→v2 migration yet, or for anything the Upgrade Service doesn't cover (Kubernetes control-plane version changes, hardware changes).
 
@@ -109,7 +109,7 @@ Upgrades on AWS consist of two parts: EKS Kubernetes services and ARM Mac node t
 ### Services upgrade
 Run the CodeBuild project pointed at the Orka 3.6 Ansible image (same method used during installation).
 
-### ARM node tooling upgrade — SSH method (preferred)
+### ARM node tooling upgrade: SSH method (preferred)
 
 ```yaml
 # buildspec.yml
@@ -130,7 +130,7 @@ phases:
       - ansible-playbook -i arm.ssh.aws_ec2.yml configure-arm.yml --private-key ~/.ssh/id_rsa
 ```
 
-### ARM node tooling upgrade — SSM method (fallback, up to 4 hours)
+### ARM node tooling upgrade: SSM method (fallback, up to 4 hours)
 
 ```bash
 ansible-playbook -i arm.ssm.aws_ec2.yml configure-arm.yml
@@ -229,12 +229,12 @@ Orka Anywhere is any deployment you run and manage yourself (AWS-hosted or fully
 **On-premises:** reuses the exact `ghcr.io/macstadium/orka-ansible-onprem` container and the same `cluster.yml`/`nodes.yml`/`hosts` files used at install. Playbooks are idempotent, re-running them re-converges the cluster to the target version. The upgrade is the same container-then-playbook flow as install, just with the target version's tag on the image:
 
 ```bash
-# Services upgrade — enter the container built for your target version, then run the playbook inside it
+# Services upgrade: enter the container built for your target version, then run the playbook inside it
 docker run -it -v <KUBECONFIG_PATH>:/root/.kube/config -v ./cluster.yml:/ansible/group_vars/all/cluster.yml ghcr.io/macstadium/orka-ansible-onprem:<VERSION_TAG> bash
 # inside the container, in /ansible:
 ansible-playbook site.yml
 
-# ARM node tooling upgrade — same pattern, with the node-specific mounts
+# ARM node tooling upgrade: same pattern, with the node-specific mounts
 docker run -it -v <KUBECONFIG_PATH>:/root/.kube/config -v ./cluster.yml:/ansible/group_vars/all/cluster.yml -v ./nodes.yml:/ansible/group_vars/arm-nodes/nodes.yml -v ./hosts:/ansible/hosts -v <MAC_SSH_KEY_PATH>:/root/.ssh/id_rsa ghcr.io/macstadium/orka-ansible-onprem:<VERSION_TAG> bash
 # inside the container, in /ansible:
 ansible-playbook configure-arm.yml -i hosts --ask-become-pass

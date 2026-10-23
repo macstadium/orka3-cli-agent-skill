@@ -14,7 +14,7 @@ Current version: `3.1.2`
 
 ## What it does
 
-The plugin deploys an Orka VM from a source image, runs Packer provisioners (shell scripts, file uploads, etc.) inside it, saves the result as a new image, and deletes the VM. The plugin handles deploy, connect, provision, save, and delete — you write the provisioners.
+The plugin deploys an Orka VM from a source image, runs Packer provisioners (shell scripts, file uploads, etc.) inside it, saves the result as a new image, and deletes the VM. The plugin handles deploy, connect, provision, save, and delete, you write the provisioners.
 
 ## Configuration
 
@@ -44,7 +44,7 @@ source "macstadium-orka" "image" {
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `source_image` | Yes | Base image — CRD name or OCI path |
+| `source_image` | Yes | Base image: CRD name or OCI path |
 | `orka_auth_token` | Yes | Service account token (not user token) |
 | `orka_endpoint` | Yes | Orka API URL, e.g. `http://10.221.188.20` |
 | `image_name` | No | Output image name. Pushed to a registry when it parses as an OCI reference, otherwise saved locally (requires NFS image storage). Default `packer-{{timestamp}}` |
@@ -98,11 +98,11 @@ The plugin runs `sync` in the guest before creating the image, then waits for th
 
 The repo includes example templates in `examples/` (Sequoia and Tahoe, 90 GB and 200 GB). These install Homebrew, Xcode CLT, Fastlane, Git, Cocoapods, and Swift.
 
-**Known fix (PR #84, pending merge):** The examples had two bugs — Homebrew requires Xcode CLT to be installed first (the templates skipped this step), and the `brew shellenv` eval line was missing a closing `)` so PATH was never set in `.zprofile`. Both are fixed in PR #84. Until it merges, the existing example templates will fail Homebrew installation.
+**Known fix (PR #84, pending merge):** The examples had two bugs: Homebrew requires Xcode CLT to be installed first (the templates skipped this step), and the `brew shellenv` eval line was missing a closing `)` so PATH was never set in `.zprofile`. Both are fixed in PR #84. Until it merges, the existing example templates will fail Homebrew installation.
 
 ## Bridge networking
 
-Bridge networking (introduced in Orka 3.5) is supported by the Packer plugin as of Orka 3.6. No plugin config change is needed — the plugin works transparently with bridge-networked clusters.
+Bridge networking (introduced in Orka 3.5) is supported by the Packer plugin as of Orka 3.6. No plugin config change is needed. The plugin works transparently with bridge-networked clusters.
 
 ## Gotchas
 

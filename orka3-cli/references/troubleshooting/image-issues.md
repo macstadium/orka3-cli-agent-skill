@@ -145,13 +145,13 @@ Alert on node disk usage so you catch this before deploys slow down. See [monito
 Three caching-related bugs were fixed in Orka 3.6.4. If you're on an earlier version and hitting these symptoms, upgrading resolves them.
 
 **Caching jobs that couldn't schedule, or got stuck mid-import, never failed or released resources.** If 4 or more caching jobs on the same node were stuck this way, no new VMs could deploy on that node.
-- **Fixed:** Caching jobs now fail after a bounded deadline (3 hours by default). The deadline is tunable via the `cache_job_active_deadline_seconds` Ansible variable — this is a cluster-admin/Ansible-level setting, not an `orka` CLI flag. If a caching job fails after ~3 hours with no other explanation, this deadline is the cause, not a new bug.
+- **Fixed:** Caching jobs now fail after a bounded deadline (3 hours by default). The deadline is tunable via the `cache_job_active_deadline_seconds` Ansible variable. This is a cluster-admin/Ansible-level setting, not an `orka` CLI flag. If a caching job fails after ~3 hours with no other explanation, this deadline is the cause, not a new bug.
 
 **Cached images could be evicted unexpectedly** (a regression introduced in 3.6.3).
 - **Fixed:** Orka now retains cached images as expected. No workaround was available pre-3.6.4 other than re-caching (`orka imagecache add <IMAGE> --all`).
 
 **Namespaces created with `orka namespace create --enable-custom-pods` didn't grant the `orka-dev` role binding to users added to the namespace afterward,** leaving them without dev-level access.
-- **Fixed:** Namespaces created on 3.6.4+ are unaffected. Existing custom-pods namespaces created before upgrading do **not** resolve automatically — contact [MacStadium support](mailto:support@macstadium.com) to have the missing role binding applied. See also `references/troubleshooting/auth-issues.md`.
+- **Fixed:** Namespaces created on 3.6.4+ are unaffected. Existing custom-pods namespaces created before upgrading do **not** resolve automatically. Contact [MacStadium support](mailto:support@macstadium.com) to have the missing role binding applied. See also `references/troubleshooting/auth-issues.md`.
 
 ## Problem: `imagecache remove` fails or isn't recognized despite an up-to-date CLI
 
@@ -179,7 +179,7 @@ If the cluster is on an earlier version, it needs a cluster upgrade (see `upgrad
 - A subsequent `orka imagecache add <IMAGE>` reports the image as already cached on some nodes and skips re-caching the updated content
 - Affects both OCI and NFS images
 
-**Impact:** VMs still deploy from the updated image — the first VM deployment from that image on an affected node re-caches it automatically. That first deployment is just slower, since the cache rebuilds at deploy time instead of ahead of time.
+**Impact:** VMs still deploy from the updated image: the first VM deployment from that image on an affected node re-caches it automatically. That first deployment is just slower, since the cache rebuilds at deploy time instead of ahead of time.
 
 **Workaround:**
 ```bash

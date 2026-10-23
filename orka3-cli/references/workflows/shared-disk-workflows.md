@@ -100,7 +100,7 @@ Re-run Ansible to apply changes.
 
 ## First-Time Per-Host Disk Initialization
 
-After enabling shared disk and provisioning a host, the guest-visible shared disk arrives **unformatted**. You must format it once per host — subsequent VMs on that host auto-mount at `/Volumes/shared` with no additional setup.
+After enabling shared disk and provisioning a host, the guest-visible shared disk arrives **unformatted**. You must format it once per host. Subsequent VMs on that host auto-mount at `/Volumes/shared` with no additional setup.
 
 This applies to **both AWS and on-prem** deployments.
 
@@ -110,7 +110,7 @@ orka vm deploy init-vm --image <IMAGE> --node <HOST_NODE>
 
 # 2. In the guest, find the unformatted disk
 diskutil list internal physical
-# Look for an unformatted disk (no partition scheme) — note its identifier (e.g., disk1)
+# Look for an unformatted disk (no partition scheme): note its identifier (e.g., disk1)
 
 # 3. Format the disk (JHFS+ for macOS compatibility)
 diskutil eraseDisk -noEFI JHFS+ shared /dev/<DISK_IDENTIFIER>
@@ -122,7 +122,7 @@ ls /Volumes/shared
 orka vm delete init-vm
 ```
 
-Once formatted, the disk **persists across host reboots** — this is a one-time operation per host. All future VMs deployed on that host will auto-mount the shared disk at `/Volumes/shared`.
+Once formatted, the disk **persists across host reboots**. This is a one-time operation per host. All future VMs deployed on that host will auto-mount the shared disk at `/Volumes/shared`.
 
 ## Requirements Checklist
 

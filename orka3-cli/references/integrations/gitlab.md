@@ -25,7 +25,7 @@ The Custom executor runs each CI/CD job inside a fresh Orka VM, then deletes it 
 
 ## Shell executor (permanent)
 
-The Shell executor runs jobs directly on the machine where the GitLab Runner is installed — a long-lived Orka VM. No scripting or Docker involved. Install the Runner on the VM and register it with `--executor shell`.
+The Shell executor runs jobs directly on the machine where the GitLab Runner is installed, a long-lived Orka VM. No scripting or Docker involved. Install the Runner on the VM and register it with `--executor shell`.
 
 ## Auth
 
@@ -61,7 +61,7 @@ orka sa token <SERVICE_ACCOUNT_NAME> --no-expiration
 
 ## Connectivity
 
-Runner initiates connection to GitLab — one-way. The GitLab server does not need visibility to Orka. The runner container must have network access to both the Orka endpoint and the GitLab server.
+Runner initiates connection to GitLab, one-way. The GitLab server does not need visibility to Orka. The runner container must have network access to both the Orka endpoint and the GitLab server.
 
 ## IP mapping
 
