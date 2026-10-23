@@ -30,9 +30,13 @@ orka3 config set --api-url https://company.orka.app
 ```
 
 **Common API URLs:**
-- `http://10.221.188.20` — Standard Orka 2.1+ on-premises / MSDC
-- `https://company.orka.app` — Domain-based access (replace `company` with your org)
-- Check with your MacStadium team or support@macstadium.com if you don't know your API URL
+- `http://10.221.188.20`: environments first deployed with Orka 2.1 or later
+- `http://10.221.188.100`: environments first deployed before Orka 2.1
+- `https://company.orka.app`: built-in Orka domain (replace `company` with your org), or your external custom domain
+- If the cluster has public NAT IPs or a custom domain for the Orka API, use the public URL. The internal IP times out on those clusters.
+- Find your API URL in the IP Allocation table in My Cloud (MacStadium Portal), or ask support@macstadium.com
+
+**`--api-url` does not change kubeconfig.** It sets only the Orka API URL the CLI uses. The cluster's `server` entry in `~/.kube/config` points to the Kubernetes API server, a separate endpoint (for example `10.221.188.19` on TCP 6443, while the Orka API is at `10.221.188.20`). So `kubectl config view` can still show an IP address after you set `--api-url` to a hostname. That's expected, not a failed config change.
 
 ### orka3 config view
 
@@ -139,15 +143,20 @@ orka3 completion zsh > $(brew --prefix)/share/zsh/site-functions/_orka3
 
 ### orka3 version
 
-Print the current version of the Orka CLI.
+Print the local CLI version and the versions of the Orka API server and operator on the cluster.
 
 **Syntax:**
 ```bash
-orka3 version [flags]
+orka3 version [--client] [flags]
 ```
 
-**Output Includes:**
-- CLI build information
-- Compatibility with Orka cluster
-- Upgrade Service operator version (v3.6+)
-- Upgrade Service agent version per node (v3.6+)
+**Options:**
+- `--client` - Print only the local CLI version, without contacting the cluster
+
+**Output fields:**
+- `Client Version`: your local `orka3` CLI
+- `API Version`: Orka API server
+- `Operator Version`: Orka operator (webhooks and CRDs ship with it and match its version)
+- `Upgrade Service Operator Version`, `Upgrade Service Cluster Agent Version`: only when Upgrade Service is installed
+
+Per-node Virtual Kubelet and Orka Engine versions come from `orka3 node list -o wide` (`VERSION` and `RUNTIME`). Components can report different numbers on the same cluster because a patch release only bumps what it changed. See "Checking component versions" in `references/workflows/upgrade-workflows.md`.

@@ -123,6 +123,12 @@ orka3 sa token sa-jenkins --no-expiration
 - A service account automatically has access to the namespace it was created in, and can't be moved to another namespace
 - Individual tokens can't be revoked; only `sa delete` revokes, and it revokes all of that account's tokens. Use one service account per consumer, and rotate by minting a new token on the same account
 - `sa list` doesn't show token expiry
+- New service accounts get developer (`orka-dev`) permissions in their namespace, not admin. There is no `orka3` command to add a user or service account to the `orka-admin` RoleBinding.
+
+**Admin-privileged service accounts:**
+- **Self-managed and Orka Anywhere on-prem:** you have cluster-level RBAC rights. Elevate a service account by editing the `orka-admin` RoleBinding directly with `kubectl`. Elevate a user by adding them to the admin OIDC group or editing the same RoleBinding.
+- **MacStadium-hosted clusters:** customer admins can't modify the `orka-admin` RoleBinding or anything else in the `default` namespace. This is expected. For an admin service account (for example, to automate custom TLS certificate uploads to `/api/v1/upload/cert`), ask MacStadium support to enable the managed `orka-admin` service account. After that, any of your admins can mint a token with `orka3 sa token orka-admin`. No credentials are handed over.
+- An `orka-admin` token can also create and delete service accounts, mint their tokens, and read or update registry credentials. Store it like any admin credential. If it's exposed, invalidate it by deleting and recreating the service account.
 
 ### orka3 serviceaccount list (alias: sa)
 

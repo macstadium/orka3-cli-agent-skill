@@ -8,9 +8,28 @@ Self-service as of Orka 3.6+ via the Upgrade Service (v2), started and monitored
 1. Review release notes for the target version
 2. Confirm Upgrade Service and node agents are healthy: `orka3 upgrade versions`, `orka3 upgrade service status`, `orka3 upgrade service agents`
 3. Start the run: `orka3 upgrade run --version <VERSION>` (admin access required)
-4. Monitor: `orka3 upgrade status <run-name>`
+4. Monitor: `orka3 upgrade status <RUN_NAME>`
 5. After upgrade: download the new CLI version and regenerate service account tokens if this was a full version upgrade (or if the release notes require it)
 6. Update Orka VM Tools in custom golden images (`brew upgrade orka-vm-tools`) and republish them. Match the cluster's release line (3.x cluster, 3.x VM Tools). VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release, so a 3.6.4 cluster runs VM Tools 3.6.0. A VM Tools mismatch breaks disk resize and shared storage on Apple silicon.
+
+### Checking component versions
+
+A cluster's version is the release version, but its components are versioned separately, and a patch release only publishes new builds of the components it changed. Some components keep an earlier number. Example: a 3.6.4 cluster runs the API server and Orka Engine at 3.6.3, because neither changed in 3.6.4. That is not a failed upgrade.
+
+```bash
+orka3 version             # API Version (API server), Operator Version (operator, webhooks, CRDs)
+orka3 node list -o wide   # VERSION = Virtual Kubelet, RUNTIME = Orka Engine, per node
+orka3 version --client    # Local CLI only, no cluster call
+```
+
+Compare the version number only, against the [component version matrix](https://docs.macstadium.com/orka/orka-upgrades-and-release-notes/orka-component-versions). The suffix after the version (`-c8fe8aed`) is a build ID and can differ between clusters on the same release. On 3.4 the Engine version itself ends in `-oc` (`orka-engine://3.4.2-oc-<BUILD>`), and that `-oc` is part of the version.
+
+- A 3.6.4 cluster is on 3.6.4 when the operator and every node's Virtual Kubelet report 3.6.4.
+- If one node reports an earlier Virtual Kubelet or Engine than the matrix, that node's tooling wasn't upgraded. Send `orka3 node list -o wide` output to MacStadium support.
+- Use the CLI version the matrix lists for the release. A newer CLI can include commands the cluster doesn't support yet (for example `imagecache remove` needs a 3.6.3+ cluster).
+- VM Tools and CI/CD integrations are versioned independently of the release (on the 3.6 line, VM Tools stays at 3.6.0).
+
+**On-prem 3.6.4 installer re-pull:** the `ghcr.io/macstadium/orka-ansible-onprem:3.6.4` image published before October 1, 2026 deployed the operator, CRDs, and Virtual Kubelet at 3.6.3. If an Orka Anywhere on-prem cluster reports operator 3.6.3 after a 3.6.4 upgrade, re-pull the `3.6.4` installer image and run the upgrade again.
 
 ### What persists across a full version upgrade
 - Orka users
@@ -60,8 +79,8 @@ Orka does not change how you upgrade Kubernetes. Follow standard upgrade practic
 kubectl get nodes
 orka3 node list
 kubectl get pods
-orka3 vm deploy --image <image>
-curl <api-endpoint>/api/v1/cluster-info   # Expect HTTP 200
+orka3 vm deploy --image <IMAGE_NAME>
+curl <ORKA_API_URL>/api/v1/cluster-info   # Expect HTTP 200
 ```
 
 Orka 3.6 is validated against Kubernetes 1.35. The Virtual Kubelet requires no upgrade and is forward-compatible with new Kubernetes versions.
@@ -87,7 +106,7 @@ version: 0.2
 env:
   shell: bash
   secrets-manager:
-    SSH_PRIVATE_KEY: "<your-secret-name>"
+    SSH_PRIVATE_KEY: "<SECRET_NAME>"
 phases:
   install:
     commands:
@@ -117,13 +136,13 @@ ansible-playbook -i arm.ssh.aws_ec2.yml configure-arm.yml \
 
 # Change license key
 ansible-playbook -i arm.ssh.aws_ec2.yml configure-arm.yml \
-  --private-key ~/.ssh/id_rsa -e override_orka_engine_license_key=<key>
+  --private-key ~/.ssh/id_rsa -e override_orka_engine_license_key=<LICENSE_KEY>
 ```
 
 ### Multi-region deployments
 
 ```bash
-aws codebuild start-build --project-name <project-name> \
+aws codebuild start-build --project-name <PROJECT_NAME> \
   --environment-variables-override name=AWS_DEFAULT_REGION,value=us-west-2,type=PLAINTEXT
 ```
 
@@ -161,7 +180,7 @@ If these commands fail with `no matches for kind "ClusterUpgrade"`, the Upgrade 
 orka3 upgrade run --version <VERSION>     # Admin access required
 orka3 upgrade run --version latest        # Resolves once at run creation, fixed for that run
 orka3 upgrade status                      # Most recent run
-orka3 upgrade status <run-name>
+orka3 upgrade status <RUN_NAME>
 orka3 upgrade history                     # Retained runs, newest first (10 max)
 ```
 All four commands support `-o json` for scripting.
@@ -200,16 +219,16 @@ Orka Anywhere is any deployment you run and manage yourself (AWS-hosted or fully
 
 ```bash
 # Services upgrade — enter the container built for your target version, then run the playbook inside it
-docker run -it -v <kube_config_location>:/root/.kube/config -v ./cluster.yml:/ansible/group_vars/all/cluster.yml ghcr.io/macstadium/orka-ansible-onprem:<version_tag> bash
+docker run -it -v <KUBECONFIG_PATH>:/root/.kube/config -v ./cluster.yml:/ansible/group_vars/all/cluster.yml ghcr.io/macstadium/orka-ansible-onprem:<VERSION_TAG> bash
 # inside the container, in /ansible:
 ansible-playbook site.yml
 
 # ARM node tooling upgrade — same pattern, with the node-specific mounts
-docker run -it -v <kube_config_location>:/root/.kube/config -v ./cluster.yml:/ansible/group_vars/all/cluster.yml -v ./nodes.yml:/ansible/group_vars/arm-nodes/nodes.yml -v ./hosts:/ansible/hosts -v <mac_ssh_key_location>:/root/.ssh/id_rsa ghcr.io/macstadium/orka-ansible-onprem:<version_tag> bash
+docker run -it -v <KUBECONFIG_PATH>:/root/.kube/config -v ./cluster.yml:/ansible/group_vars/all/cluster.yml -v ./nodes.yml:/ansible/group_vars/arm-nodes/nodes.yml -v ./hosts:/ansible/hosts -v <MAC_SSH_KEY_PATH>:/root/.ssh/id_rsa ghcr.io/macstadium/orka-ansible-onprem:<VERSION_TAG> bash
 # inside the container, in /ansible:
 ansible-playbook configure-arm.yml -i hosts --ask-become-pass
 ```
-`<version_tag>` is the target Orka version (e.g. `3.6.4`), the same variable named in the install docs, not a new upgrade-specific flag. Node tooling (Virtual Kubelet, Orka Engine) is version-gated, not blindly replaced: the playbook compares installed vs. target version and only updates on a mismatch, so re-running against nodes already on the target is a no-op. You normally don't need to set `osx_node_orka_engine_version` or `osx_node_orka_vk_version` in `nodes.yml` for a routine upgrade: the `orka-ansible` package ships with its own default pin for the node tooling version. Set them only if MacStadium has given you a specific custom build.
+`<VERSION_TAG>` is the target Orka version (e.g. `3.6.4`), the same image tag variable used at install, not a new upgrade-specific flag. Node tooling (Virtual Kubelet, Orka Engine) is version-gated, not blindly replaced: the playbook compares installed vs. target version and only updates on a mismatch, so re-running against nodes already on the target is a no-op. You normally don't need to set `osx_node_orka_engine_version` or `osx_node_orka_vk_version` in `nodes.yml` for a routine upgrade: the `orka-ansible` package ships with its own default pin for the node tooling version. Set them only if MacStadium has given you a specific custom build.
 
 **Don't pin these to the release version.** Orka Engine and Virtual Kubelet aren't always on the same version as the release. Orka 3.6.4 uses Orka Engine 3.6.3 and no Engine 3.6.4 build exists, so `osx_node_orka_engine_version: official/3.6.4` makes the configuration playbook fail with HTTP 403 on every node.
 
@@ -225,7 +244,7 @@ Requires `kubectl` (admin context) and `jq`, plus outbound HTTPS to distribution
 
 **AWS-hosted Anywhere: fresh v2 install, not a migration.** Upgrade Service isn't present by default on AWS-hosted Anywhere, there's no v1 to migrate from. Install it via CodeBuild the same way as ARM node tooling, using the Ansible image tagged for your current version:
 ```bash
-AWS_DEFAULT_REGION=<region> ansible-playbook -i arm.ssh.aws_ec2.yml /ansible/deploy-upgrade-service.yml --private-key ~/.ssh/id_rsa
+AWS_DEFAULT_REGION=<AWS_REGION> ansible-playbook -i arm.ssh.aws_ec2.yml /ansible/deploy-upgrade-service.yml --private-key ~/.ssh/id_rsa
 ```
 
 ## Host node macOS upgrades (3.7.0-alpha+)

@@ -69,7 +69,7 @@ Common fields:
 | Field | Notes |
 |-------|-------|
 | Namespace | Default `orka-default`. The service account must have access to it |
-| Name Prefix | VM and Jenkins agent name become `<PREFIX>-<random>`. Use a unique prefix per controller so leaked VMs are attributable |
+| Name Prefix | VM and Jenkins agent name become `<PREFIX>-<RANDOM>`. Use a unique prefix per controller so leaked VMs are attributable |
 | VM Credentials | SSH credentials for the VM |
 | Scheduler | `default` spreads VMs across nodes; `most-allocated` fills a node before using the next |
 | Tag / Tag Required | Node affinity. Tag Required deploys only to nodes with the tag |

@@ -10,6 +10,7 @@ This guide covers common image-related issues with the Orka3 CLI.
 - [Fixed in Orka 3.6.4: caching jobs could stall indefinitely](#fixed-in-orka-364-caching-jobs-could-stall-indefinitely)
 - [Problem: `imagecache remove` fails or isn't recognized despite an up-to-date CLI](#problem-imagecache-remove-fails-or-isnt-recognized-despite-an-up-to-date-cli)
 - [Known Issue: re-caching an image committed under the same name (v3.6.3+)](#known-issue-re-caching-an-image-committed-under-the-same-name-v363)
+- [Known Issue: in-place macOS 15.x and 26.x upgrades inside a VM fail](#known-issue-in-place-macos-15x-and-26x-upgrades-inside-a-vm-fail)
 - [Problem: "Invalid image format"](#problem-invalid-image-format)
 - [Problem: Image push fails (Apple Silicon)](#problem-image-push-fails-apple-silicon)
 - [Problem: `vm save` or `vm commit` fails with "image storage is not supported"](#problem-vm-save-or-vm-commit-fails-with-image-storage-is-not-supported)
@@ -187,6 +188,59 @@ orka3 imagecache add <IMAGE> --all
 # Option 2: Deploy a VM from the image once to force the re-cache
 orka3 vm deploy --image <IMAGE>
 ```
+
+## Known Issue: in-place macOS 15.x and 26.x upgrades inside a VM fail
+
+**Status:** Open. Workaround below. Source: [compatibility matrix](https://docs.macstadium.com/orka/orka-overview/compatibility-matrix).
+
+**Symptoms** (Software Update or `startosinstall`):
+- **macOS 26.x** (for example 26.6 to 26.6.2, or to 26.7): the VM never finishes its first boot after the upgrade restart. Staying below 26.7 doesn't avoid it.
+- **macOS 15.x** (for example 15.7.6 to 15.8.1): the VM boots, but macOS can use only about 1.75 GiB of memory, however much the VM has.
+- In-place upgrades to macOS 27 are not affected.
+
+**Cause:** since macOS 27.0 shipped (September 14, 2026), an in-place update inside a VM installs the requested macOS version but downloads the newest firmware/recovery bundle Apple serves for virtual Macs (macOS 27's). This affects any Apple Virtualization.framework guest, not only Orka, and the host's macOS version doesn't matter (it fails on a 26.6.2 host too).
+
+**Check a 15.x VM after an upgrade** (both values in bytes):
+```bash
+sysctl hw.memsize hw.memsize_usable
+```
+`hw.memsize_usable` should be close to `hw.memsize`. Around `1879031808` (about 1.75 GiB) on a larger VM means it got the newer firmware.
+
+**An affected VM can't be repaired in place.** Recreate it, then apply the workaround to the new VM before upgrading. Same for a 26.x VM that never finished its first boot.
+
+**Workaround** (inside the guest, before starting the upgrade). Run the code blocks exactly as written, without leading indentation, so the heredoc terminator works.
+
+**Step 1. Download the full installer** while Apple's servers are reachable. Replace `<MACOS_VERSION>` with the target, for example `26.7` or `15.8.1`:
+```bash
+softwareupdate --fetch-full-installer --full-installer-version <MACOS_VERSION>
+```
+
+**Step 2. Block the firmware download:**
+```bash
+sudo tee -a /etc/hosts >/dev/null <<'EOF'
+127.0.0.1 gdmf.apple.com
+127.0.0.1 mesu.apple.com
+127.0.0.1 updates.cdn-apple.com
+127.0.0.1 updates-http.cdn-apple.com
+127.0.0.1 swcdn.apple.com
+127.0.0.1 swdist.apple.com
+EOF
+sudo dscacheutil -flushcache
+sudo killall -HUP mDNSResponder
+```
+
+**Step 3. Run the installer** for the target version. `<ADMIN_USER>` is an administrator account on the VM; `--stdinpass` reads its password from standard input.
+```bash
+# macOS 26.x
+"/Applications/Install macOS Tahoe.app/Contents/Resources/startosinstall" --agreetolicense --nointeraction --forcequitapps --user <ADMIN_USER> --stdinpass
+# macOS 15.x
+"/Applications/Install macOS Sequoia.app/Contents/Resources/startosinstall" --agreetolicense --nointeraction --forcequitapps --user <ADMIN_USER> --stdinpass
+```
+Check `/var/log/install.log` for `No SFR update was found on the server, using bundled SFR` to confirm the fallback worked. The VM reboots into the new version in about 15 to 20 minutes.
+
+**Step 4. Verify and unblock.** On 15.x, rerun `sysctl hw.memsize hw.memsize_usable` and confirm the values are close. Then remove the six lines added to `/etc/hosts`, or Software Update and other Apple downloads in the guest stay blocked.
+
+Contact MacStadium support if the workaround doesn't resolve it.
 
 ## Problem: "Invalid image format"
 

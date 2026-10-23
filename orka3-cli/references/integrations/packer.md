@@ -52,7 +52,7 @@ source "macstadium-orka" "image" {
 | `image_force_overwrite` | No | Overwrite existing image if it exists |
 | `orka_vm_cpu_core` | No | CPU count for the builder VM, default `3` |
 | `orka_vm_builder_namespace` | No | Namespace for the builder VM, default `orka-default` |
-| `orka_vm_builder_prefix` | No | Builder VM name prefix, default `packer` (VM name `<PREFIX>-<timestamp>`) |
+| `orka_vm_builder_prefix` | No | Builder VM name prefix, default `packer` (VM name `<PREFIX>-<TIMESTAMP>`) |
 | `orka_vm_builder_name` | No | Exact builder VM name; overrides the prefix |
 | `orka_vm_tag` | No | Node tag for the builder VM (node affinity, same as `vm deploy --tag`) |
 | `orka_vm_tag_required` | No | Deploy only on nodes with `orka_vm_tag` (same as `--tag-required`) |
@@ -67,7 +67,7 @@ source "macstadium-orka" "image" {
 `orka_auth_token` must be a service account token. The config docs are explicit on this. User tokens expire in 1 hour.
 
 ```bash
-orka3 sa token <service-account-name>
+orka3 sa token <SERVICE_ACCOUNT_NAME>
 ```
 
 Pass via variable, not inline in the template:
@@ -107,7 +107,7 @@ Bridge networking (introduced in Orka 3.5) is supported by the Packer plugin as 
 ## Gotchas
 
 - **VPN required.** Packer must have network connectivity to the Orka endpoint. If running locally, connect via VPN first.
-- **`packer init` downloads the plugin.** Run `packer init <template>.pkr.hcl` before `packer build`.
+- **`packer init` downloads the plugin.** Run `packer init <TEMPLATE>.pkr.hcl` before `packer build`.
 - **`no_delete_vm` and `no_create_image`** are debug-only flags. Don't set them in production: with `no_delete_vm` the plugin won't clean up the builder VM, and with `no_create_image` no image is produced.
 - **IP mapping:** If Orka node IPs are not directly reachable, set `enable_orka_node_ip_mapping = true` and provide `orka_node_ip_map`.
 - **Intel-only flags:** `orka_enable_net_boost` and `orka_enable_legacy_io` are Intel only. Ignore on Apple Silicon clusters.

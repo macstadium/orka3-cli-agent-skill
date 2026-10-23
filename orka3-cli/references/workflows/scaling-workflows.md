@@ -5,6 +5,7 @@ This guide covers VM scaling, disk management, and resource optimization.
 ## Contents
 - [Scaling VMs for Load Testing](#scaling-vms-for-load-testing)
 - [VM Disk Management Workflow](#vm-disk-management-workflow)
+- [Node Disk Sizing and Storage Usage](#node-disk-sizing-and-storage-usage)
 - [Apple Silicon Capacity (VM Slots)](#apple-silicon-capacity-vm-slots)
 - [Resource Optimization](#resource-optimization)
 - [Scheduler Options](#scheduler-options)
@@ -86,6 +87,23 @@ orka3 vm delete intel-vm
 # 5. Deploy new VMs with larger disk
 orka3 vm deploy --image ventura-150gb.img
 ```
+
+## Node Disk Sizing and Storage Usage
+
+**Orka doesn't check free host disk before placing a VM.** If a node runs out of disk under write load, guest writes can fail, and in some cases this has caused unrecoverable APFS corruption on the VM. Host-level disk monitoring and alerting aren't available yet. Source: [Resiliency, HA, and DR](https://docs.macstadium.com/orka/orka-resources/resiliency-high-availability-and-disaster-recovery).
+
+**Size from maximum, not current, usage.** A sparse image using 20 GB today can grow toward its full provisioned size (say 90 GB) under write load. Per node, add up:
+- the maximum provisioned size of every VM you expect to run there at once, and
+- every distinct image cached on that node.
+
+That total must fit comfortably under the node's usable disk. MacStadium's standard node sizing assumes at least 1 TB; on smaller nodes, redo the math.
+
+**Reclaim space:** on cluster 3.6.3+, remove cached images you no longer deploy with `orka3 imagecache remove` (see `image-commands.md`). On earlier versions, upgrade to get it.
+
+**Where to check storage usage** (the MacStadium Portal doesn't show Orka storage usage):
+- **Harbor OCI storage:** the project summary in the Harbor web UI shows usage against quota. Harbor also exposes Prometheus metrics on 3.5+ (ask support for the endpoint).
+- **Host disk:** scrape the per-node exporters with Prometheus (see `monitoring.md`).
+- **Primary NFS export** (VM images, ISOs, default shared VM storage): not exposed through the CLI, portal, or any customer-facing metrics endpoint. Open a support ticket for a usage report or a larger allocation.
 
 ## Apple Silicon Capacity (VM Slots)
 

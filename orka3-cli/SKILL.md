@@ -34,6 +34,10 @@ Android Emulators (Apple Silicon, 3.7+ early access): `orka3 emulator deploy|lis
 
 Host node macOS upgrades and pod quota (3.7.0-alpha+): Orka can upgrade Apple silicon host nodes to macOS Tahoe (26) in place. Each node also advertises a Kubernetes scheduler pod quota (VM + emulator + image-cache job pods, default `4`, tunable via `osx_node_orka_quota_pod`), running emulators eats into this quota fast, two VMs with paired emulators already hit the default with no room for an image-cache job.
 
+Component versions: a patch release only bumps the components it changed, so a 3.6.4 cluster reports API server and Orka Engine 3.6.3. That's not a failed upgrade. Read versions with `orka3 version` (API, operator) and `orka3 node list -o wide` (`VERSION` = Virtual Kubelet, `RUNTIME` = Orka Engine) and compare against the [component matrix](https://docs.macstadium.com/orka/orka-upgrades-and-release-notes/orka-component-versions). `orka3 upgrade versions` reports `unknown` until the first Upgrade Service v2 run.
+
+macOS guests: macOS 27 Golden Gate needs Orka 3.6+, a macOS 26.6.2+ host, and more than 2 GB of RAM (4 GB recommended). macOS 27 as a host OS isn't signed off yet. In-place upgrades to macOS 15.x and 26.x inside a VM currently fail without a workaround (see `references/troubleshooting/image-issues.md`). Android emulators with `google_apis_playstore` reject ADB (`device unauthorized`); use `google_apis`.
+
 Upgrades are self-service, not support-ticket-only: MSDC clusters (3.6+) upgrade via the Upgrade Service (`orka3 upgrade run/status/history/versions`, `orka3 upgrade service status/agents`). Orka Anywhere (self-managed AWS or on-prem) upgrades by re-running the same Ansible install process against the target version's image, idempotent, no separate procedure. See `references/workflows/upgrade-workflows.md` for both flows.
 
 ## Quick CLI Guide
@@ -181,24 +185,24 @@ Most questions are answerable from this file. Load references for full flag deta
 | Image & imagecache flags | `references/commands/image-commands.md` |
 | Android emulator flags (early access, v3.7.0-alpha+) | `references/commands/emulator-commands.md` |
 | Registry credential management | `references/commands/registry-commands.md` |
-| Namespace, SA, rolebinding flags | `references/commands/admin-commands.md` |
+| Namespace, SA, rolebinding flags, hosted-cluster admin limits | `references/commands/admin-commands.md` |
 | Node list/tag/namespace flags | `references/commands/node-commands.md` |
 | CLI config, login, completion | `references/commands/config-commands.md` |
-| Orka REST API (Swagger, auth, request/response shapes) | `references/commands/rest-api.md` |
+| Orka REST API (Swagger, auth, request/response shapes, emulator endpoints) | `references/commands/rest-api.md` |
 | VM config template flags | `references/commands/vm-config-commands.md` |
 | CI/CD pipeline setup | `references/workflows/cicd-workflows.md` |
-| Custom images, OCI workflows | `references/workflows/image-workflows.md` |
+| Custom images, OCI workflows, macOS guest compatibility | `references/workflows/image-workflows.md` |
 | Multi-namespace, tagging, RBAC | `references/workflows/admin-workflows.md` |
-| Scaling, load testing, disk mgmt | `references/workflows/scaling-workflows.md` |
-| Intel→ARM migration, backup | `references/workflows/migration-workflows.md` |
+| Scaling, load testing, disk mgmt, node disk sizing, storage usage | `references/workflows/scaling-workflows.md` |
+| Intel→ARM migration, NFS-to-Harbor OCI migration, backup | `references/workflows/migration-workflows.md` |
 | VM shared attached disk (v3.5.2+) | `references/workflows/shared-disk-workflows.md` |
-| Cluster upgrades, Kubernetes upgrades, AWS upgrades | `references/workflows/upgrade-workflows.md` |
+| Cluster upgrades, component versions, Upgrade Service troubleshooting, Kubernetes upgrades, AWS upgrades | `references/workflows/upgrade-workflows.md` |
 | License management, seat activation, LicenseSpring portal | `references/workflows/license-management.md` |
 | Monitoring, Prometheus metrics, alerting | `references/workflows/monitoring.md` |
 | Orka Burst capacity | `references/workflows/burst-workflows.md` |
 | Token/permission errors | `references/troubleshooting/auth-issues.md` |
 | Resource errors, VM issues | `references/troubleshooting/deployment-issues.md` |
-| Async ops, image caching issues, 3.6.4 fixes | `references/troubleshooting/image-issues.md` |
+| Async ops, image caching issues, 3.6.4 fixes, in-place macOS upgrade failures | `references/troubleshooting/image-issues.md` |
 | Screen Sharing, SSH, ports | `references/troubleshooting/network-issues.md` |
 | GitLab Custom/Shell executor | `references/integrations/gitlab.md` |
 | Packer plugin (image builds) | `references/integrations/packer.md` |

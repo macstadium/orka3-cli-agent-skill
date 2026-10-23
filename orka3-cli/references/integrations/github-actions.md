@@ -1,7 +1,7 @@
 # GitHub Actions Integration
 
 Repo: https://github.com/macstadium/orka-github-actions-integration  
-Image: `ghcr.io/macstadium/orka-github-runner:<tag>`
+Image: `ghcr.io/macstadium/orka-github-runner:<TAG>`
 
 ## Contents
 - [What it does](#what-it-does)
@@ -22,8 +22,8 @@ The integration tracks in-flight VM deployments to prevent over-provisioning whe
 ## Prerequisites
 
 - GitHub App for repo- or org-level runners. Instructions: `docs/github-app-setup-steps.md` in the repo. Alternatively, a classic PAT via `GITHUB_PAT` (v1.1.15+), which is required for enterprise-level runners (see [Auth](#auth)).
-- An Orka VM config created from a suitable base image: `orka3 vmc create <name> --image <image>`
-- A service account token: `orka3 sa token <service-account-name>`
+- An Orka VM config created from a suitable base image: `orka3 vmc create <VM_CONFIGURATION_NAME> --image <IMAGE_NAME>`
+- A service account token: `orka3 sa token <SERVICE_ACCOUNT_NAME>`
 - A machine with Docker and network access to the Orka cluster
 
 ## Configuration
@@ -32,22 +32,22 @@ Run the container with env vars directly or via a `.env` file:
 
 ```bash
 docker run \
-  -e GITHUB_APP_ID=<id> \
-  -e GITHUB_APP_INSTALLATION_ID=<install-id> \
+  -e GITHUB_APP_ID=<GITHUB_APP_ID> \
+  -e GITHUB_APP_INSTALLATION_ID=<GITHUB_APP_INSTALLATION_ID> \
   -e GITHUB_APP_PRIVATE_KEY_PATH=/keys/private-key.pem \
-  -e GITHUB_URL=https://github.com/<org-or-repo> \
+  -e GITHUB_URL=https://github.com/<ORG_OR_REPO> \
   -e ORKA_URL=http://10.221.188.20 \
-  -e ORKA_TOKEN=<service-account-token> \
+  -e ORKA_TOKEN=<SERVICE_ACCOUNT_TOKEN> \
   -e ORKA_VM_CONFIG=my-orka-runner \
   -e RUNNERS='[{"name":"my-github-runner"}]' \
   -v /path/to/keys:/keys \
-  ghcr.io/macstadium/orka-github-runner:<tag>
+  ghcr.io/macstadium/orka-github-runner:<TAG>
 ```
 
 Or mount a `.env` file:
 
 ```bash
-docker run -v /path/to/.env:/.env ghcr.io/macstadium/orka-github-runner:<tag>
+docker run -v /path/to/.env:/.env ghcr.io/macstadium/orka-github-runner:<TAG>
 ```
 
 ## Key variables
@@ -87,14 +87,14 @@ docker run -v /path/to/.env:/.env ghcr.io/macstadium/orka-github-runner:<tag>
 `ORKA_TOKEN` must be a service account token, not a user token. User tokens expire in 1 hour.
 
 ```bash
-orka3 sa token <service-account-name>
+orka3 sa token <SERVICE_ACCOUNT_NAME>
 ```
 
 For long-lived or non-expiring tokens:
 
 ```bash
-orka3 sa token <name> --duration 8760h   # 1 year
-orka3 sa token <name> --no-expiration
+orka3 sa token <SERVICE_ACCOUNT_NAME> --duration 8760h   # 1 year
+orka3 sa token <SERVICE_ACCOUNT_NAME> --no-expiration
 ```
 
 ### GitHub credentials: App or PAT
@@ -152,5 +152,5 @@ jobs:
 - **ORKA_VM_CONFIG must exist before the container starts.** Create it with `orka3 vmc create`.
 - **Node IP mapping.** If the container is outside the Orka network, set `ORKA_ENABLE_NODE_IP_MAPPING=true` and provide the mapping JSON.
 - **Orphaned VMs are cleaned up automatically.** VMs without a corresponding GitHub runner for two consecutive checks (`VM_TRACKER_INTERVAL`, default 300s) are deleted. Runner deregistration uses exponential backoff on failure.
-- **VM names are `<RUNNERS[].name>-<random>`.** There is no name prefix setting, so give scale sets a recognizable name if you filter or clean up VMs by name.
+- **VM names are `<RUNNERS[].name>-<RANDOM>`.** There is no name prefix setting, so give scale sets a recognizable name if you filter or clean up VMs by name.
 - **Debug logging:** set `LOG_LEVEL=debug`.

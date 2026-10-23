@@ -236,7 +236,7 @@ If you cannot resolve an issue:
 
 1. **Get Verbose Output:**
    ```bash
-   orka3 <command> --output json
+   orka3 <COMMAND> --output json
    ```
 
 2. **Collect Diagnostic Information:**
