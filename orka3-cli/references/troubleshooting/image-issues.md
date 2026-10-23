@@ -160,8 +160,11 @@ Three caching-related bugs were fixed in Orka 3.6.4. If you're on an earlier ver
 
 **Solution:** confirm the cluster's version, not just the CLI's:
 ```bash
-orka3 upgrade versions
+orka3 version             # API Version, Operator Version
+orka3 node list -o wide   # VERSION = Virtual Kubelet, RUNTIME = Orka Engine
 ```
+Compare these against the [component version matrix](https://docs.macstadium.com/orka/orka-upgrades-and-release-notes/orka-component-versions). A patch release only bumps the components it changed, so some components report an earlier number than the release (a 3.6.4 cluster runs the API server at 3.6.3). Don't rely on `orka3 upgrade versions` for this: it reports `unknown` until the cluster completes its first Upgrade Service v2 run.
+
 If the cluster is on an earlier version, it needs a cluster upgrade (see `upgrade-workflows.md`), not a CLI reinstall.
 
 ## Known Issue: re-caching an image committed under the same name (v3.6.3+)
