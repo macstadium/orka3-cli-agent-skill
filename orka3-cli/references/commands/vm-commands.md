@@ -263,7 +263,7 @@ orka3 vm resize <VM_NAME> <NEW_SIZE_GB> [--user <SSH_USER>] [--password <SSH_PAS
 - `-n, --namespace string` - Target namespace
 
 **Architecture Behavior:**
-- **Apple Silicon**: Requires Orka VM Tools installed in the guest, at a version matching the cluster. With VM Tools present, Orka resizes and repartitions automatically
+- **Apple Silicon**: Requires Orka VM Tools installed in the guest, on the same release line as the cluster (3.x VM Tools on a 3.x cluster). With VM Tools present, Orka resizes and repartitions automatically
 - **Intel**: Provide SSH credentials for automatic repartition, or manually complete
 
 **Notes:**

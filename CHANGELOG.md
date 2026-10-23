@@ -28,6 +28,10 @@ Folds in verified findings from Robert Elwell's Orka agent playbooks, which were
 
 ### Fixed
 
+- TeamCity: plugin 2.0.1 installs from the JetBrains Marketplace (no `./gradlew build`), authenticates only with a service account token (no email/password), and the profile has Namespace and Node mappings fields; added the first-ARM-deploy timeout known issue
+- Namespace resolution: `orka3 user login` and `orka3 user set-token` reset the `orka` context namespace to `orka-default`, so `ORKA_DEFAULT_NAMESPACE` is the lasting default; the precedence order applies only to `vm`, `node`, `imagecache`, `registrycredential`, `rolebinding`, `serviceaccount`; `orka3 upgrade service` always defaults to `orka-default`
+- `monitoring.md`: added the Orka server metrics target at `/api/v1/metrics` (GET check, HEAD returns 404)
+- VM Tools version guidance: match the cluster's release line, not its exact version (a 3.6.4 cluster runs VM Tools 3.6.0)
 - Android emulator commands: `--platform` and `--image-type` are required with no defaults, the device flag is `--device-profile`, `emulator list` has no `--vm` filter, and connection details are `RELAY-IP`/`RELAY-PORT` (`relayIp`/`relayPort`), not `adbRelayIP`/`adbRelayPort`
 - `-o json` examples: `.[]` and `.[0].name`, not `.items[]` or `.name`
 - `orka3 vmc create` examples no longer pass `--namespace` (the flag doesn't exist)

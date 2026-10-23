@@ -45,22 +45,26 @@ orka3 config view [flags]
 
 ## Default Namespace Detection (v3.5.2+)
 
-The Orka CLI now automatically reads the default namespace from your orka kubeconfig context, eliminating the need to repeatedly specify namespaces in commands.
+The Orka CLI reads the default namespace from your `orka` kubeconfig context, so you don't need to pass a namespace on every command.
 
 **Namespace Resolution Hierarchy (highest to lowest priority):**
 1. `--namespace` / `-n` flag on command
 2. `ORKA_DEFAULT_NAMESPACE` environment variable
-3. Namespace from orka kubeconfig context
+3. Namespace set on the `orka` context in your kubeconfig
 4. Falls back to `orka-default`
 
-**Setting a Custom Default Namespace:**
-```bash
-# Option 1: Environment variable (session or persistent)
-export ORKA_DEFAULT_NAMESPACE=my-team-namespace
-orka3 vm list  # Uses my-team-namespace
+**Scope:** this order applies only to the `vm`, `node`, `imagecache`, `registrycredential`, `rolebinding`, and `serviceaccount` commands, for every user, not only admins. `orka3 upgrade service` doesn't follow it: its `--namespace` flag always defaults to `orka-default` and ignores both the environment variable and the kubeconfig context.
 
-# Option 2: kubectl context (persistent)
-kubectl config set-context orka --namespace=orka-default
+**Setting a lasting default namespace:** use the environment variable, for example in your shell profile:
+```bash
+export ORKA_DEFAULT_NAMESPACE=<NAMESPACE>
+```
+
+Setting the namespace on the context (`kubectl config set-context orka --namespace=<NAMESPACE>`) works only until the next `orka3 user login` or `orka3 user set-token`: both reset the `orka` context namespace to `orka-default` every time they run. Don't recommend the context as a persistent default.
+
+**Commands land in an unexpected namespace:** the environment variable beats the kubeconfig context, so check for and unset a stale `ORKA_DEFAULT_NAMESPACE`:
+```bash
+unset ORKA_DEFAULT_NAMESPACE
 ```
 
 **Requirements:**

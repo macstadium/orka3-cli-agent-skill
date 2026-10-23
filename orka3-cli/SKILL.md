@@ -24,7 +24,7 @@ Four execution contexts: local machine (full CLI), CI/CD (ephemeral containers â
 
 Image save, commit, push, and caching are async. Always pair with the status-check command: `orka3 image list <IMAGE>`, `orka3 imagecache info <IMAGE>`, or `orka3 vm get-push-status <JOB>`.
 
-Namespace resolution (v3.5.2+): `--namespace` flag > `ORKA_DEFAULT_NAMESPACE` env var > kubeconfig context > `orka-default`. Some features (shared disk, namespace auto-detection, macOS Tahoe) require v3.5.2+.
+Namespace resolution (v3.5.2+, for `vm`, `node`, `imagecache`, `registrycredential`, `rolebinding`, `serviceaccount`): `--namespace` flag > `ORKA_DEFAULT_NAMESPACE` env var > `orka` kubeconfig context > `orka-default`. `orka3 user login` and `orka3 user set-token` reset the context namespace to `orka-default`, so use `ORKA_DEFAULT_NAMESPACE` for a lasting default. Some features (shared disk, namespace auto-detection, macOS Tahoe) require v3.5.2+.
 
 Kubernetes upgrade resilience (v3.6+): Most orka3 commands continue working during k8s control-plane upgrades. Only `login` and `vm push` require the API server; expect failures for those two until the upgrade completes.
 

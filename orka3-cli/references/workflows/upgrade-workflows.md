@@ -10,7 +10,7 @@ Self-service as of Orka 3.6+ via the Upgrade Service (v2), started and monitored
 3. Start the run: `orka3 upgrade run --version <VERSION>` (admin access required)
 4. Monitor: `orka3 upgrade status <run-name>`
 5. After upgrade: download the new CLI version and regenerate service account tokens if this was a full version upgrade (or if the release notes require it)
-6. Update Orka VM Tools in custom golden images to the new cluster version and republish them. A VM Tools mismatch breaks disk resize and shared storage on Apple silicon.
+6. Update Orka VM Tools in custom golden images (`brew upgrade orka-vm-tools`) and republish them. Match the cluster's release line (3.x cluster, 3.x VM Tools). VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release, so a 3.6.4 cluster runs VM Tools 3.6.0. A VM Tools mismatch breaks disk resize and shared storage on Apple silicon.
 
 ### What persists across a full version upgrade
 - Orka users

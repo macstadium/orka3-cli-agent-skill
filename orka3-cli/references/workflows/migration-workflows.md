@@ -60,7 +60,7 @@ orka3 vmc create arm-version \
 | Custom serial | Supported | Not supported |
 | OCI registry push | Not supported | Supported |
 | Image caching | Not supported | Supported |
-| Disk resize | SSH credentials for automatic repartition, otherwise manual | Requires Orka VM Tools in the guest, at the cluster's version |
+| Disk resize | SSH credentials for automatic repartition, otherwise manual | Requires Orka VM Tools in the guest, on the cluster's release line |
 
 ## Disaster Recovery and Backup Strategy
 

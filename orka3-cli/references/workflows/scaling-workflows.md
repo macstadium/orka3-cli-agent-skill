@@ -51,7 +51,7 @@ orka3 vm list -o json | jq -r '.[] | select(.name | startswith("load-test")) | .
 
 ### Apple Silicon - Simple resize
 
-Requires Orka VM Tools installed in the guest, at a version matching the cluster. Without it, the disk isn't resized and repartitioned.
+Requires Orka VM Tools installed in the guest, on the same release line as the cluster (for example, 3.x VM Tools on a 3.x cluster). Without it, the disk isn't resized and repartitioned.
 
 ```bash
 # 1. Deploy VM (image must include Orka VM Tools)

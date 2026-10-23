@@ -162,7 +162,7 @@ orka3 ic add ghcr.io/your-org/orka-images/custom-sonoma:v1.3 --all
 
 ## Apple Silicon Image Known Issues
 
-- **Keep Orka VM Tools at the cluster's version.** A mismatch breaks disk resize and shared storage. After a cluster upgrade, rebuild custom golden images with the matching VM Tools (`brew upgrade orka-vm-tools`).
+- **Keep Orka VM Tools on the cluster's release line** (3.x VM Tools on a 3.x cluster). A mismatch breaks disk resize and shared storage. After a cluster upgrade, rebuild custom golden images with `brew upgrade orka-vm-tools`. VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release, so a 3.6.4 cluster runs VM Tools 3.6.0, so don't expect the VM Tools version to equal the cluster version.
 - **Upgrade macOS before resizing the disk.** A macOS upgrade can fail on a resized VM. Upgrade first and resize last. If you've already resized, start from an unresized image.
 - **Provisioning UDID isn't stable across deploys on Sequoia.** If signing needs a stable Provisioning UDID, build from a Sonoma base image, upgrade the guest to Sequoia in place, then save the image.
 

@@ -14,6 +14,7 @@ This guide covers collecting Orka metrics with Prometheus and the alerts that ma
 
 | Source | Endpoint | Notes |
 |--------|----------|-------|
+| Orka server (API) | `http://<ORKA_LB_IP>/api/v1/metrics` | Go runtime and process metrics only (`go_goroutines`, `process_resident_memory_bytes`). The path is `/api/v1/metrics`, not `/metrics`. Mostly relevant if you use integrations that still rely on the legacy API server |
 | Orka operator | `http://<ORKA_LB_IP>:8080/metrics` | VM lifecycle metrics. `<ORKA_LB_IP>` is usually `10.221.188.20` or `10.221.188.100`; check your IP plan |
 | Node exporter | `http://<NODE_IP>:9100/metrics` | Runs on every node, Intel, Apple silicon, and control plane. Mac nodes run the Homebrew darwin build of `node_exporter` |
 | GitHub Actions integration | `http://<GHA_RUNNER_HOST>:8080/metrics` | Opt-in with `ENABLE_METRICS=true`. See [github-actions.md](../integrations/github-actions.md#metrics) |
@@ -26,14 +27,27 @@ Only the GitHub Actions integration exposes its own Prometheus metrics. For Jenk
 **Network:** Prometheus needs a route into the Orka private network (VPN or site-to-site), and TCP 9100 must be reachable on every node. Check each target returns `200 OK`:
 
 ```bash
+curl -s -o /dev/null -w '%{http_code}\n' http://<ORKA_LB_IP>/api/v1/metrics
 curl -I http://<ORKA_LB_IP>:8080/metrics
 curl -I http://<NODE_IP>:9100/metrics
 ```
+
+Use a GET (not `curl -I`) for the Orka server. It only answers the HTTP methods its routes register, so a HEAD request to `/api/v1/metrics` returns 404 even when the endpoint works and Prometheus can scrape it. The operator and node exporter answer HEAD.
 
 ## Scrape configuration
 
 ```yaml
 scrape_configs:
+  - job_name: 'orka/orka-server'
+    scrape_interval: 30s
+    scrape_timeout: 30s
+    metrics_path: /api/v1/metrics
+    scheme: http
+    static_configs:
+      - targets: ['10.221.188.20']
+        labels:
+          service: 'orka-server'
+
   - job_name: 'orka/orka-operator'
     scrape_interval: 30s
     scrape_timeout: 30s
