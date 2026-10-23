@@ -8,6 +8,7 @@ This guide covers common network and connectivity issues with Orka3 VMs.
 - [Problem: Port conflicts](#problem-port-conflicts)
 - [Problem: VM is slow/unresponsive during use](#problem-vm-is-slowunresponsive-during-use)
 - [Problem: VM deployments are very slow](#problem-vm-deployments-are-very-slow)
+- [Known Guest Issues (Apple Silicon)](#known-guest-issues-apple-silicon)
 - [Default Credentials](#default-credentials)
 - [Common Ports](#common-ports)
 - [Getting Help](#getting-help)
@@ -55,6 +56,8 @@ orka3 vm deploy --image ghcr.io/macstadium/orka-images/sonoma:latest
 # 5. Wait longer - VM may still be booting
 # First boot can take 5-10 minutes
 ```
+
+If SSH works but Screen Sharing doesn't on an Apple silicon VM, see [Known Guest Issues](#known-guest-issues-apple-silicon).
 
 ## Problem: Cannot connect via SSH
 
@@ -132,8 +135,8 @@ orka3 node list --output wide
 
 # Look at available resources on host node
 
-# 3. Check if too many VMs on one node
-orka3 vm list --output wide | awk '{print $NF}' | sort | uniq -c
+# 3. Check if too many VMs on one node (count VMs per node)
+orka3 vm list -o json | jq -r 'group_by(.node)[] | "\(.[0].node) \(length)"'
 ```
 
 **Solutions:**
@@ -202,6 +205,15 @@ orka3 vm deploy --image <IMAGE> --node <LESS_LOADED_NODE>
 orka3 vm deploy --image <IMAGE> --timeout 20
 ```
 
+## Known Guest Issues (Apple Silicon)
+
+| Symptom | Cause / fix |
+|---------|-------------|
+| Screen Sharing fails but SSH works | A failed GPU module in the Apple Virtualization framework. Use SSH, or redeploy the VM |
+| `orka: Operation not permitted` when accessing shared storage over SSH | Grant Full Disk Access to `sshd-keygen-wrapper` (System Settings > Privacy & Security > Full Disk Access), then save or commit the image to keep the change |
+| iCloud sign-in fails with "The action could not be completed" | Apple Virtualization framework limitation. Download the software through a web browser and install it manually |
+| `curl http://169.254.169.254/metadata/` times out right after boot | The metadata server isn't ready yet. Gate on it with `until curl -fs --max-time 2 http://169.254.169.254/metadata/ >/dev/null; do sleep 1; done`. See [vm-commands.md](../commands/vm-commands.md) |
+
 ## Default Credentials
 
 For MacStadium base images (ghcr.io/macstadium/orka-images/*):
@@ -235,7 +247,12 @@ If you cannot resolve an issue:
    orka3 vm list --output wide
    ```
 
-3. **Contact MacStadium Support:**
+3. **Turn on Integration Debug Logging (if a CI integration is involved):**
+   - Jenkins: add a log recorder for `io.jenkins.plugins.orka` at level `ALL`
+   - GitLab: run the runner with `gitlab-runner --debug run`
+   - GitHub Actions integration: set `LOG_LEVEL=debug`
+
+4. **Contact MacStadium Support:**
    - Provide CLI version, cluster version, and error messages
    - Include diagnostic output
    - Describe what you were trying to accomplish

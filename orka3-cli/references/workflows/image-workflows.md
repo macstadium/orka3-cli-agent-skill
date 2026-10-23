@@ -7,6 +7,8 @@ This guide covers custom image preparation, caching, and OCI registry integratio
 - [Image Caching for Fast Deployments (Apple Silicon)](#image-caching-for-fast-deployments-apple-silicon)
 - [OCI Registry Integration Workflow](#oci-registry-integration-workflow)
 - [VM save vs. VM commit](#vm-save-vs-vm-commit)
+- [Image Versioning and Promotion](#image-versioning-and-promotion)
+- [Apple Silicon Image Known Issues](#apple-silicon-image-known-issues)
 - [Image Management Best Practices](#image-management-best-practices)
 
 ## Custom Image Preparation Workflow
@@ -34,29 +36,37 @@ orka3 vm list base-config --output wide
 #      Note: Base images from ghcr.io/macstadium/orka-images are automatically kept
 #      current with VM Tools on each Orka release (3.6+). Skip this step if using a
 #      current GHCR base image. Only needed for custom images not derived from one.
+#    - Install MDM/EDR/DLP agents if required, but don't enroll them here:
+#      every VM cloned from this image would share one device identity.
+#      Enroll per VM at deploy time instead.
 
-# 5. Save as new image (preserves original)
+# 5. Flush the guest's disk writes (required). The host copies the running VM's
+#    disk without flushing the guest, so unsynced writes can be missing from the image.
+ssh -p <SSH_PORT> admin@<VM_IP> sync
+
+# 6. Save as new image (preserves original)
+#    save and commit need NFS image storage; on Harbor/OCI-only clusters use vm push
 orka3 vm save base-config my-configured-sonoma
 
 # OR commit to original image (modifies original)
 orka3 vm commit base-config --description 'Configured with build tools'
 
-# 6. Wait for async operation to complete
+# 7. Wait for async operation to complete
 orka3 image list my-configured-sonoma --output wide
 
-# 7. Clean up base VM
+# 8. Clean up base VM
 orka3 vm delete base-config
 
-# 8. Test the new image
+# 9. Boot-test the published image, not the builder VM
 orka3 vm deploy test-vm --image my-configured-sonoma
 
-# 9. Verify configuration persists
+# 10. Verify configuration persists
 # Connect via Screen Sharing and verify changes
 
-# 10. Clean up test VM
+# 11. Clean up test VM
 orka3 vm delete test-vm
 
-# 11. Deploy production VMs with configured image
+# 12. Deploy production VMs with configured image
 orka3 vm deploy prod-vm-1 --image my-configured-sonoma --cpu 6 --memory 12
 ```
 
@@ -74,7 +84,7 @@ orka3 ic add ghcr.io/macstadium/orka-images/sonoma:latest --all
 # 3. Check caching progress
 orka3 ic info ghcr.io/macstadium/orka-images/sonoma:latest
 
-# Wait until status shows 'ready' on all nodes
+# Wait until status shows 'Ready' on all nodes
 
 # 4. Cache additional images on specific nodes
 orka3 ic add my-configured-image --nodes mini-arm-1,mini-arm-2,mini-arm-3
@@ -120,11 +130,12 @@ orka3 vm deploy --image ghcr.io/your-org/orka-images/custom-sonoma:v1.2
 # 4. Customize VM (connect via Screen Sharing)
 # Install software, configure settings, etc.
 
-# 5. Push customized VM back to registry (Apple Silicon only)
+# 5. Flush guest disk writes, then push customized VM back to registry (Apple Silicon only)
+ssh -p <SSH_PORT> admin@<VM_IP> sync
 orka3 vm push <VM_NAME> ghcr.io/your-org/orka-images/custom-sonoma:v1.3
 
-# 6. Check push status
-orka3 vm get-push-status
+# 6. Check push status (pass the VM's namespace; finished pushes show Ready)
+orka3 vm get-push-status -n <VM_NAMESPACE>
 
 # 7. Deploy new VMs from updated image
 orka3 vm deploy --image ghcr.io/your-org/orka-images/custom-sonoma:v1.3
@@ -139,12 +150,28 @@ orka3 ic add ghcr.io/your-org/orka-images/custom-sonoma:v1.3 --all
 |-----------|----------|----------|
 | `vm save` | Creates new image, preserves original | Creating variants of a base image |
 | `vm commit` | Updates original image | Iterative development on single image |
+| `vm push` | Pushes to an OCI registry, doesn't restart the VM | Distributing images (Apple Silicon); the only option on Harbor/OCI-only clusters |
+
+`vm save` and `vm commit` require NFS image storage on the cluster. On clusters that use only Harbor or another OCI registry (Harbor is the default for new deployments since 3.5), they fail with `image storage is not supported`; use `vm push`.
+
+## Image Versioning and Promotion
+
+- Push every build under an immutable version tag (for example `:1.4.2`) and never re-push a version tag.
+- Use channel tags (for example `:stable`) to mark which version is promoted.
+- Promote and roll back by repointing the VM config CI uses at a version tag. VM configs can't be updated in place, so create a config for the new version, repoint CI, then delete the old config (see [vm-config-commands.md](../commands/vm-config-commands.md)).
+
+## Apple Silicon Image Known Issues
+
+- **Keep Orka VM Tools on the cluster's release line** (3.x VM Tools on a 3.x cluster). A mismatch breaks disk resize and shared storage. After a cluster upgrade, rebuild custom golden images with `brew upgrade orka-vm-tools`. VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release, so a 3.6.4 cluster runs VM Tools 3.6.0, so don't expect the VM Tools version to equal the cluster version.
+- **Upgrade macOS before resizing the disk.** A macOS upgrade can fail on a resized VM. Upgrade first and resize last. If you've already resized, start from an unresized image.
+- **Provisioning UDID isn't stable across deploys on Sequoia.** If signing needs a stable Provisioning UDID, build from a Sonoma base image, upgrade the guest to Sequoia in place, then save the image.
 
 ## Image Management Best Practices
 
-1. **Test images before deployment** - Always verify new images work correctly
-2. **Use descriptive names** - Include version or date in image names
-3. **Cache images for CI/CD** - Pre-cache on dedicated CI nodes
-4. **Use OCI registries** - Modern approach for image distribution
-5. **Document image configurations** - Track what's installed in each image
-6. **Clean up unused images** - Regularly remove old/unused images
+1. **Test images before deployment** - Boot-test the published image, not the builder VM
+2. **Run `sync` before push, save, or commit** - Otherwise recent writes can be missing
+3. **Use descriptive names** - Include version or date in image names
+4. **Cache images for CI/CD** - Pre-cache on dedicated CI nodes
+5. **Use OCI registries** - Standard approach for image distribution
+6. **Document image configurations** - Track what's installed in each image
+7. **Clean up unused images** - Regularly remove old/unused images

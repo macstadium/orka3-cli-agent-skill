@@ -12,6 +12,8 @@ This guide covers Intel to Apple Silicon migration and disaster recovery strateg
 
 ## Migration from Intel to Apple Silicon
 
+Orka 3.6 is the last release with Intel support. Intel is supported through March 2028; plan to finish migrating by December 2027.
+
 **Plan and execute architecture migration:**
 
 ```bash
@@ -58,7 +60,7 @@ orka3 vmc create arm-version \
 | Custom serial | Supported | Not supported |
 | OCI registry push | Not supported | Supported |
 | Image caching | Not supported | Supported |
-| Disk resize | Requires SSH credentials | Automatic |
+| Disk resize | SSH credentials for automatic repartition, otherwise manual | Requires Orka VM Tools in the guest, on the cluster's release line |
 
 ## Disaster Recovery and Backup Strategy
 
@@ -102,8 +104,8 @@ orka3 vm deploy backup-vm --image <IMAGE_NAME>
 #    b. Push to registry with date tag
 orka3 vm push backup-vm ghcr.io/company/backups/<IMAGE_NAME>:$(date +%Y%m%d)
 
-#    c. Wait for push to complete
-orka3 vm get-push-status
+#    c. Wait for push to complete (status Ready; push jobs live in the VM's namespace)
+orka3 vm get-push-status -n <VM_NAMESPACE>
 
 #    d. Clean up backup VM
 orka3 vm delete backup-vm
@@ -118,12 +120,12 @@ orka3 vm delete backup-vm
 
 ```bash
 # 1. Add registry credentials (if not already configured)
-orka3 regcred add https://ghcr.io --username <USER> --password <TOKEN>
+echo "$REGISTRY_TOKEN" | orka3 regcred add https://ghcr.io --username <USER> --password-stdin
 
 # 2. Deploy VM from backed-up image
 orka3 vm deploy restored-vm --image ghcr.io/company/backups/<IMAGE_NAME>:<DATE>
 
-# 3. Save as local image (optional)
+# 3. Save as local image (optional; requires NFS image storage on the cluster)
 orka3 vm save restored-vm <LOCAL_IMAGE_NAME>
 
 # 4. Clean up

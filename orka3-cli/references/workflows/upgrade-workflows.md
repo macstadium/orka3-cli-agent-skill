@@ -9,7 +9,8 @@ Self-service as of Orka 3.6+ via the Upgrade Service (v2), started and monitored
 2. Confirm Upgrade Service and node agents are healthy: `orka3 upgrade versions`, `orka3 upgrade service status`, `orka3 upgrade service agents`
 3. Start the run: `orka3 upgrade run --version <VERSION>` (admin access required)
 4. Monitor: `orka3 upgrade status <run-name>`
-5. After upgrade: download the new CLI version and regenerate service account tokens if this was a full version upgrade
+5. After upgrade: download the new CLI version and regenerate service account tokens if this was a full version upgrade (or if the release notes require it)
+6. Update Orka VM Tools in custom golden images (`brew upgrade orka-vm-tools`) and republish them. Match the cluster's release line (3.x cluster, 3.x VM Tools). VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release, so a 3.6.4 cluster runs VM Tools 3.6.0. A VM Tools mismatch breaks disk resize and shared storage on Apple silicon.
 
 ### What persists across a full version upgrade
 - Orka users
@@ -151,7 +152,9 @@ orka3 upgrade versions              # Current version + available releases
 orka3 upgrade service status        # Eligible nodes vs. live/seen agents
 orka3 upgrade service agents        # Per-node agent version, status, lease age
 ```
-Resolve any node reporting `STALE` or `MISSING` before starting. If your OrkaNode roster isn't in the default namespace, pass `-n <namespace>`.
+Resolve any node reporting `STALE` or `MISSING` before starting. `orka3 upgrade service agents` only lists nodes in one namespace (default `orka-default`), so run it with `-n <NAMESPACE>` for every namespace that has nodes.
+
+If these commands fail with `no matches for kind "ClusterUpgrade"`, the Upgrade Service isn't installed on the cluster. This is common on AWS-hosted Anywhere (see [AWS-hosted Anywhere](#orka-anywhere-upgrades-self-service-aws-hosted-or-on-premises) below).
 
 **Starting and monitoring a run:**
 ```bash
@@ -162,6 +165,8 @@ orka3 upgrade status <run-name>
 orka3 upgrade history                     # Retained runs, newest first (10 max)
 ```
 All four commands support `-o json` for scripting.
+
+Pin an explicit version (`orka3 upgrade run --version <VERSION>`) in change tickets and runbooks rather than `latest`, so the ticket records exactly what was applied.
 
 **How a run behaves:** validates the target release, upgrades Upgrade Service itself if needed, upgrades per-node agents, upgrades node components (canary node first, then a bounded rolling window), upgrades core control-plane components, then remaining Orka services. If a node upgrade fails, no new node work is released, in-flight work finishes, and the run is marked failed with the control plane left on its previous version, every node ends as succeeded/failed/skipped with a reason. Retrying a failed run means creating a new run at the same target; already-converged components are idempotent. There is no full-cluster rollback, and deleting a run does not cancel in-flight work.
 

@@ -6,11 +6,14 @@ This guide covers common image-related issues with the Orka3 CLI.
 - [Problem: Async image operations stuck in progress](#problem-async-image-operations-stuck-in-progress)
 - [Problem: Cannot delete image (in use)](#problem-cannot-delete-image-in-use)
 - [Problem: Image cache not working (Apple Silicon)](#problem-image-cache-not-working-apple-silicon)
+- [Problem: Deploys that used to be fast are slow again (cache eviction)](#problem-deploys-that-used-to-be-fast-are-slow-again-cache-eviction)
 - [Fixed in Orka 3.6.4: caching jobs could stall indefinitely](#fixed-in-orka-364-caching-jobs-could-stall-indefinitely)
 - [Problem: `imagecache remove` fails or isn't recognized despite an up-to-date CLI](#problem-imagecache-remove-fails-or-isnt-recognized-despite-an-up-to-date-cli)
 - [Known Issue: re-caching an image committed under the same name (v3.6.3+)](#known-issue-re-caching-an-image-committed-under-the-same-name-v363)
 - [Problem: "Invalid image format"](#problem-invalid-image-format)
 - [Problem: Image push fails (Apple Silicon)](#problem-image-push-fails-apple-silicon)
+- [Problem: `vm save` or `vm commit` fails with "image storage is not supported"](#problem-vm-save-or-vm-commit-fails-with-image-storage-is-not-supported)
+- [Problem: Image is missing recent changes](#problem-image-is-missing-recent-changes)
 - [Problem: Image copy operation slow or failing](#problem-image-copy-operation-slow-or-failing)
 - [Image Operation Timing Reference](#image-operation-timing-reference)
 - [Best Practices for Image Operations](#best-practices-for-image-operations)
@@ -79,7 +82,9 @@ orka3 image delete <IMAGE_NAME>
 
 **Symptoms:**
 - `imagecache add` succeeds but deployments still slow
-- `imagecache info` shows "not ready" indefinitely
+- `imagecache info` stays in `Caching` indefinitely, or shows `Failed`
+
+Cache states are `Ready`, `Caching`, `Failed`, `Removing`, and `RemoveFailed`.
 
 **Diagnosis:**
 ```bash
@@ -95,11 +100,12 @@ orka3 ic list --output wide
 # 1. Wait for caching to complete (can take time for large images)
 watch -n 30 'orka3 ic info <IMAGE>'
 
-# 2. Verify registry credentials exist for OCI images
-orka3 regcred list
+# 2. Verify registry credentials exist for OCI images, in the same namespace
+#    you're caching into (caching private images needs them, not only push)
+orka3 regcred list -n <NAMESPACE>
 
-# For private registries:
-orka3 regcred add <REGISTRY_URL> --username <USER> --password <TOKEN>
+# For private registries (server URL must include the scheme, e.g. https://):
+echo "$REGISTRY_TOKEN" | orka3 regcred add <REGISTRY_URL> --username <USER> --password-stdin -n <NAMESPACE>
 
 # 3. Try caching on specific nodes
 orka3 ic add <IMAGE> --nodes <NODE_NAME>
@@ -109,6 +115,27 @@ orka3 node list --output wide
 
 # 5. If cache fails persistently, contact MacStadium support
 ```
+
+**`imagecache add` into a custom namespace does nothing (clusters before 3.5.1):** on clusters older than 3.5.1, `imagecache add` with `--namespace` set to a custom namespace silently did nothing. Upgrade the cluster to 3.5.1 or later, then run `imagecache add` again.
+
+## Problem: Deploys that used to be fast are slow again (cache eviction)
+
+**Symptoms:**
+- Deploys of an image that were taking about 5 seconds now take about 4 minutes on some nodes
+- `orka3 ic info <IMAGE>` no longer lists the image on those nodes
+
+**Cause:** When a node is short on disk, deploying an uncached image there evicts the oldest cached images. Nothing reports the eviction; the next deploy of an evicted image is a cold pull.
+
+**Solutions:**
+```bash
+# Re-cache the image on the affected nodes
+orka3 ic add <IMAGE> --nodes <NODE_NAME>
+
+# Remove cached images you no longer deploy, to free disk (cluster 3.6.3+)
+orka3 ic remove <OLD_IMAGE> --nodes <NODE_NAME>
+```
+
+Alert on node disk usage so you catch this before deploys slow down. See [monitoring.md](../workflows/monitoring.md).
 
 ## Fixed in Orka 3.6.4: caching jobs could stall indefinitely
 
@@ -182,11 +209,19 @@ orka3 regcred list
 
 **Diagnosis:**
 ```bash
-# Check push status
-orka3 vm get-push-status
+# Check push status (push jobs live in the VM's namespace)
+orka3 vm get-push-status -n <VM_NAMESPACE>
 
-# List all push jobs
-orka3 vm get-push-status --output wide
+# Check a specific job
+orka3 vm get-push-status <JOB_NAME> -n <VM_NAMESPACE> --output wide
+```
+
+A finished push shows `Ready`. A failed push shows `Failed` with a message. Otherwise the status is `Pending` or `Running`. Job records are cleaned up one hour after the push finishes; if the job is gone, check the registry for the tag.
+
+**`vm push` returns `Unauthorized` while other commands work:** push goes through the Orka API server, so it needs an Orka token. A kubeconfig with certificate-only auth (common on AWS and on-prem clusters) isn't enough. For CI, set a service-account token (minted by an admin with `orka3 sa token <SA_NAME>` and stored as a CI secret):
+
+```bash
+orka3 user set-token "$ORKA_TOKEN"
 ```
 
 **Solutions:**
@@ -195,7 +230,7 @@ orka3 vm get-push-status --output wide
 orka3 regcred list
 
 # 2. Ensure credentials are in the same namespace as the VM
-orka3 regcred add <REGISTRY_URL> --username <USER> --password <TOKEN> --namespace <VM_NAMESPACE>
+echo "$REGISTRY_TOKEN" | orka3 regcred add <REGISTRY_URL> --username <USER> --password-stdin --namespace <VM_NAMESPACE>
 
 # 3. Verify image format is correct
 # Format: server.com/repository/image:tag
@@ -207,6 +242,33 @@ orka3 vm list <VM_NAME> --output wide
 # 5. Try with different tag
 orka3 vm push <VM_NAME> ghcr.io/org/repo/image:new-tag
 ```
+
+## Problem: `vm save` or `vm commit` fails with "image storage is not supported"
+
+**Symptoms:**
+- `image storage is not supported. You cannot run save or commit image commands`
+
+**Cause:** `vm save` and `vm commit` need NFS image storage on the cluster. Clusters that use only Harbor or another OCI registry (Harbor is the default for new deployments since 3.5) don't have it.
+
+**Solution:** Use `vm push` to an OCI registry instead:
+```bash
+orka3 vm push <VM_NAME> <REGISTRY>/<REPOSITORY>/<IMAGE>:<TAG> -n <VM_NAMESPACE>
+```
+
+## Problem: Image is missing recent changes
+
+**Symptoms:**
+- A VM deployed from a newly pushed, saved, or committed image is missing files or settings that were in the source VM
+
+**Cause:** The host copies the running VM's disk without flushing the guest. Writes still in the guest's page cache can be missing from the image.
+
+**Solution:** Run `sync` inside the guest right before `vm push`, `vm save`, or `vm commit`:
+```bash
+ssh -p <SSH_PORT> <USER>@<NODE_IP> sync
+orka3 vm push <VM_NAME> <REGISTRY>/<REPOSITORY>/<IMAGE>:<TAG> -n <VM_NAMESPACE>
+```
+
+See [vm-commands.md](../commands/vm-commands.md).
 
 ## Problem: Image copy operation slow or failing
 

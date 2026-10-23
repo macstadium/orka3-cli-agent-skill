@@ -187,12 +187,15 @@ Execution-capable agents (Claude Code, Gemini CLI) will run the commands directl
 - Configure access control with rolebindings
 - VM shared attached disk configuration (AWS and on-prem)
 - Log sources for deep troubleshooting (v3.4+)
+- Prometheus monitoring for nodes, the Orka operator, and CI runners
+- Orka Burst capacity (v3.3+)
 
 ### Automation
 - Create and manage service accounts
 - Generate authentication tokens
 - Create VM configuration templates
-- Set up CI/CD pipelines
+- Set up CI/CD pipelines (GitHub Actions, GitLab, Buildkite, Jenkins, Packer)
+- Clean up leaked CI VMs safely
 
 ## Architecture support
 
@@ -226,6 +229,10 @@ The archive is written to `dist/orka3-cli-v<VERSION>.skill`.
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Acknowledgments
+
+Many of the operational details in this skill, including the real `-o json` output shapes, push status values, the guest `sync` step before saving or pushing images, VM metadata, Apple silicon capacity planning, monitoring, Orka Burst, and the Jenkins and GitHub Actions integration references, come from Robert Elwell's work testing Orka agent playbooks against a live cluster.
 
 ## License
 
