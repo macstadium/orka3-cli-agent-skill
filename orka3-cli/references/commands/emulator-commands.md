@@ -2,9 +2,11 @@
 
 This reference provides detailed syntax and examples for Android emulator and emulator configuration commands.
 
-**Generally available in Orka 4.0.** Apple Silicon nodes only. Introduced as early access in Orka 3.7.0-alpha; the flags below are the 4.0 set and differ from the alpha. Emulator configurations, `--grpc`, and `--device-profile` require Orka 4.0 or later.
+**Generally available in Orka 4.0.** Apple Silicon nodes only. Introduced as early access in Orka 3.7.0-alpha. Emulator configurations, `--config`, and `--grpc` require Orka 4.0 or later. `--vm`, `--platform`, `--image-type`, and `--device-profile` were already in the alpha; in 4.0, `--platform` and `--image-type` aren't required when `--config` is set.
 
-If `--namespace` is not set, emulator commands operate in the `orka-default` namespace. Aliases for `orka3 emulator` are `emu`, `emus`, and `emulators`. The alias for `orka3 emulator-config` is `emc`.
+Emulator commands resolve the namespace the same way as `vm`: the `--namespace` flag, then the `ORKA_DEFAULT_NAMESPACE` environment variable, then the namespace in the `orka` kubeconfig context, then `orka-default`. `orka3 user login` resets the context namespace to `orka-default`, so use `ORKA_DEFAULT_NAMESPACE` for a lasting default. Emulator configurations always live in `orka-default`, whatever your default namespace is.
+
+Aliases for `orka3 emulator` are `emu`, `emus`, and `emulators`. Aliases for `orka3 emulator-config` are `emc`, `emuconfig`, `emuconfigs`, and `emulator-configs`.
 
 ## Contents
 - [orka3 emulator deploy](#orka3-emulator-deploy)
@@ -38,7 +40,7 @@ orka3 emulator deploy [AVD_NAME] --vm <VM_NAME> (--platform <PLATFORM> --image-t
 - `--generate-name` - (Optional) Generate a unique name starting with the provided `AVD_NAME`
 - `--timeout int` - (Optional) Minutes to wait for the deployment to complete (default: `5`)
 - `-o, --output string` - (Optional) Output format: `json`|`wide`
-- `-n, --namespace string` - (Optional) Namespace to deploy into (default: `orka-default`)
+- `-n, --namespace string` - (Optional) Namespace to deploy into (default: your default namespace, see above)
 
 **Examples:**
 ```bash
@@ -82,7 +84,7 @@ orka3 emulator list [AVD_NAME_1 [AVD_NAME_2 ...]] [--namespace <NAMESPACE>] [--o
 
 **Options:**
 - `-o, --output string` - (Optional) Output format: `table` (default)|`wide`|`json`
-- `-n, --namespace string` - (Optional) Namespace to list from (default: `orka-default`)
+- `-n, --namespace string` - (Optional) Namespace to list from (default: your default namespace, see above)
 
 **Examples:**
 ```bash
@@ -112,7 +114,7 @@ orka3 emulator delete <AVD_NAME> [AVD_NAME_2 ...] [--namespace <NAMESPACE>] [fla
 ```
 
 **Options:**
-- `-n, --namespace string` - (Optional) Namespace of the emulators (default: `orka-default`)
+- `-n, --namespace string` - (Optional) Namespace of the emulators (default: your default namespace, see above)
 
 **Examples:**
 ```bash
@@ -149,7 +151,7 @@ orka3 emc create android-36-grpc --platform android-36 --image-type google_apis 
 - The configuration name must not exceed 63 characters, must consist of lowercase alphanumerics, dashes, or dots, must start and end with a lowercase alphanumeric, and must be unique in the cluster.
 - All emulator configurations reside in `orka-default` and are available to every user and service account with access to it.
 - Orka copies the configuration's settings into the emulator at deploy time, so changing or deleting a configuration never affects emulators already running.
-- **gRPC on a configuration is CLI-only.** The REST create model has no `grpc` field; `orka3 emc create --grpc` writes the resource directly. You can still request gRPC for a single emulator with `grpc` in the API deploy request.
+- `--grpc` on a configuration turns gRPC on for every emulator deployed from it. A single deploy can still turn it off with `--grpc=false`. The REST API accepts `grpc` (bool) on configuration create and returns it in configuration responses when the configuration sets it.
 
 ## orka3 emulator-config list
 

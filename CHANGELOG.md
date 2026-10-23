@@ -9,8 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Draft. Orka 4.0 had not shipped when this was written; targeted for around 2026-10-28. Verified against `releases/cluster/4.0` and the 4.0 docs PRs (macstadium-docs #390 and #394), not against a released build.
 
-Commands use `orka3`. The proposed `orka3` to `orka` rename (OK-6390) is not implemented in the monorepo and is deliberately not reflected here. If it ships, every example in this skill needs sweeping.
-
 ### Added
 
 - `references/commands/emulator-commands.md`: `orka3 emulator-config create`/`list`/`delete` (alias `emc`), plus `--config`, `--device-profile` and `--grpc` on `orka3 emulator deploy`; gRPC endpoint section; `RELAY-IP`/`RELAY-PORT`/`GRPC-PORT` list columns; `PairedVMStopped` and `EmulatorUnschedulable` lifecycle reasons
