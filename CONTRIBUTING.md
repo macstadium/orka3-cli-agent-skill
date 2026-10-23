@@ -45,6 +45,32 @@ Please open an issue to discuss your idea before submitting a pull request.
 - Add examples where appropriate
 - Test your changes with Claude Code
 
+### Checking commands and flags against the CLI
+
+The CLI drift check (`.github/workflows/cli-drift-check.yml`) runs on every pull request that touches `orka3-cli/`, and weekly. It compares the commands and flags in the skill with the help of a released CLI build, so an example that uses a flag the CLI doesn't have fails the check. It reports:
+
+- **Errors:** a command heading, an example command, an example flag, or an Options list entry that the CLI doesn't have.
+- **Warnings:** a CLI flag that a command reference's Options list leaves out. These fail the check only with `--strict`.
+
+To run it locally, download the CLI version the workflow checks (`CLI_VERSION` in the workflow) and point the script at the binary. On macOS, expand the package without installing it:
+
+```bash
+VERSION=3.7.0-alpha
+mkdir -p /tmp/orka-cli && cd /tmp/orka-cli
+curl -fsSLO "https://cli-builds-public.s3.amazonaws.com/official/${VERSION}/orka3/macos/arm64/orka3.pkg"
+pkgutil --expand-full orka3.pkg expanded
+cd -
+python3 scripts/cli-drift-check.py --cli /tmp/orka-cli/expanded/orka3.pkg/Payload/orka3
+```
+
+On Linux, download `.../official/${VERSION}/orka3/linux/amd64/orka3.tar.gz` and extract it instead. For 4.0 and later the CLI is `orka`, so replace `orka3` with `orka` in the URL and path. The script needs Python 3 and nothing else, and it doesn't contact a cluster.
+
+A few conventions keep the check accurate:
+
+- Mark a command that is gone from the CLI with "Removed in Orka X" or "Deprecated in Orka X" in its section, or in the intro of its `##` group. The CLI hides deprecated commands from its help, so the check skips marked commands instead of reporting them.
+- Example lines that start with `orka3` are 3.x-only once the skill documents a 4.x `orka` CLI, and the check skips them. Against a 3.x CLI it skips `orka` lines instead. Use `--binary-name` to override the name the script reads from the CLI.
+- List flags under a `**Options:**` label as `` - `--flag type` - description `` (or `` - `-f, --flag type` ``) so the check can compare them.
+
 ## File Structure
 
 When contributing, understand the purpose of each file:
