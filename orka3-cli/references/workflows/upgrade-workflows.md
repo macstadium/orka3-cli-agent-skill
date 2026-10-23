@@ -44,7 +44,15 @@ Orka does not change how you upgrade Kubernetes. Follow standard upgrade practic
 - Virtual Kubelet: Node cannot manage VMs; marked Not Ready after extended downtime
 - **Running VMs are unaffected by all of the above**
 
-**To minimize disruption:** Increase API Server and Operator replica counts; add PodDisruptionBudgets (requires minimum 2 replicas — a single-replica deployment with a PDB blocks upgrades).
+**To minimize disruption:** Increase API Server and Operator replica counts, then add PodDisruptionBudgets (`minAvailable: 1`) selecting `app: orka-apiserver` and `app: orka-operator`. A PDB requires at least 2 replicas: a single-replica deployment with a PDB blocks the drain and the upgrade.
+
+**Webhooks PDB depends on the Orka version:**
+- **Orka 3.6 and earlier:** Orka doesn't create a Webhooks PDB. Add your own if you need the Webhooks available through the drain.
+- **Orka 4.0 and later:** Orka creates its own `orka-webhooks` PDB during install and upgrade. Don't add another. Two PDBs selecting the same pods make Kubernetes refuse to evict them, and the node drain hangs.
+- **Before upgrading from 3.6 to 4.0:** your own Webhooks PDB stays in the cluster through the upgrade and collides with the one 4.0 adds. Find it and delete any PDB whose selector matches `app: orka-webhooks`:
+  ```bash
+  kubectl get pdb -A -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,SELECTOR:.spec.selector.matchLabels'
+  ```
 
 **Post-upgrade verification:**
 ```bash
@@ -157,7 +165,25 @@ All four commands support `-o json` for scripting.
 
 **How a run behaves:** validates the target release, upgrades Upgrade Service itself if needed, upgrades per-node agents, upgrades node components (canary node first, then a bounded rolling window), upgrades core control-plane components, then remaining Orka services. If a node upgrade fails, no new node work is released, in-flight work finishes, and the run is marked failed with the control plane left on its previous version, every node ends as succeeded/failed/skipped with a reason. Retrying a failed run means creating a new run at the same target; already-converged components are idempotent. There is no full-cluster rollback, and deleting a run does not cancel in-flight work.
 
-**Until a cluster completes its first successful v2 run**, `orka3 upgrade versions` reports its version as `unknown`.
+**Until a cluster completes its first successful v2 run**, `orka3 upgrade versions` reports its version as `unknown`. To check component versions before then, use `orka3 version` and `orka3 node list -o wide`.
+
+**Who can run what:** starting a run requires administrator access. `upgrade status`, `upgrade history`, and `upgrade versions` only need read access.
+
+**Availability by deployment:**
+- **MSDC:** all 3.6+ clusters already have Upgrade Service v2 installed. No action needed.
+- **Orka Anywhere on-prem:** requires Orka 3.6.2+. Runs v1 until migrated (see the migration script below).
+- **Orka Anywhere AWS-hosted:** requires Orka 3.6+. Not installed by default; install it with the `ghcr.io/macstadium/orka-ansible-aws:3.6.4` image (see below).
+
+### Troubleshooting Upgrade Service runs
+
+- **Run stays `Pending`, then fails:** a run has up to 30 minutes to be admitted. Exceeding that usually means the target couldn't be resolved or another run was still active. Check `orka3 upgrade history`.
+- **Requested version not found or unavailable:** the release may be missing from the release index or temporarily quarantined. Check `orka3 upgrade versions`, then pick an available release or use `--version latest`.
+- **Cluster already on the requested version:** not an error. Repeated run requests are safe because run names are timestamped and never collide.
+- **A node didn't upgrade:** run `orka3 upgrade service status`, then `orka3 upgrade service agents`. An agent that hasn't renewed its lease in 90 seconds reports `STALE`; one that has never been seen reports `MISSING`. Recover the agent, then start a new run.
+- **A node was skipped or its deadline expired:** read the skip reason in `orka3 upgrade status <RUN_NAME> -o json`. Common causes: no live agent, node already on the target version, node drained, or the node roster changed during the run.
+- **Failed runs can't be resumed.** Fix the cause and start a new run at the same target.
+- **Only the 10 most recent completed runs are retained.** Export `orka3 upgrade history` or a run's status first if you need long-term records.
+- **Escalating to support:** include the run name, target release, and the output of `orka3 upgrade status <RUN_NAME> -o json` and `orka3 upgrade service agents -o json`.
 
 ## Orka Anywhere upgrades (self-service, AWS-hosted or on-premises)
 
@@ -178,7 +204,9 @@ docker run -it -v <kube_config_location>:/root/.kube/config -v ./cluster.yml:/an
 # inside the container, in /ansible:
 ansible-playbook configure-arm.yml -i hosts --ask-become-pass
 ```
-`<version_tag>` is the target Orka version (e.g. `3.6.4`), the same variable named in the install docs, not a new upgrade-specific flag. Node tooling (Virtual Kubelet, Orka Engine) is version-gated, not blindly replaced: the playbook compares installed vs. target version and only updates on a mismatch, so re-running against nodes already on the target is a no-op. You normally don't need to set `osx_node_orka_engine_version` or `osx_node_orka_vk_version` in `nodes.yml` for a routine upgrade, only if MacStadium has given you a specific custom build.
+`<version_tag>` is the target Orka version (e.g. `3.6.4`), the same variable named in the install docs, not a new upgrade-specific flag. Node tooling (Virtual Kubelet, Orka Engine) is version-gated, not blindly replaced: the playbook compares installed vs. target version and only updates on a mismatch, so re-running against nodes already on the target is a no-op. You normally don't need to set `osx_node_orka_engine_version` or `osx_node_orka_vk_version` in `nodes.yml` for a routine upgrade: the `orka-ansible` package ships with its own default pin for the node tooling version. Set them only if MacStadium has given you a specific custom build.
+
+**Don't pin these to the release version.** Orka Engine and Virtual Kubelet aren't always on the same version as the release. Orka 3.6.4 uses Orka Engine 3.6.3 and no Engine 3.6.4 build exists, so `osx_node_orka_engine_version: official/3.6.4` makes the configuration playbook fail with HTTP 403 on every node.
 
 **Hybrid (EKS control plane + on-prem Mac nodes):** upgrade each part with its own workflow above.
 
