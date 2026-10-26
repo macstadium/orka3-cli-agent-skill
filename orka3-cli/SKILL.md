@@ -166,7 +166,7 @@ orka rbac add-subject --role dev --namespace <NS> --user <EMAIL>                
 orka rbac add-subject --role dev --namespace <NS> --serviceaccount <SA_NS>:<SA_NAME>
 orka rbac list-subjects --role dev --namespace <NS>
 orka rbac remove-subject --role dev --namespace <NS> --user <EMAIL>
-orka rbac add-subject --role admin --user <EMAIL>                                   # Cluster-wide; not on MSDC-hosted clusters
+orka rbac add-subject --role admin --user <EMAIL>                                   # Cluster-wide, MSDC-hosted included
 ```
 On 3.6, use `orka3 rb add-subject|list-subjects|remove-subject --namespace <NS>` (same `--user`/`--serviceaccount` flags). `rolebinding` still works on 4.0 but is deprecated.
 

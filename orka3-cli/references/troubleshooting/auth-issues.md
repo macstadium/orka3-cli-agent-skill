@@ -144,7 +144,7 @@ orka namespace list    # Admin-only: succeeds for admins, Forbidden for everyone
 # - Or have an existing admin delegate specific tasks via service accounts
 ```
 
-**Service account gets Forbidden on an admin-only task (hosted clusters):** service accounts created with `orka sa create` get developer permissions, and on MacStadium-hosted clusters customer admins can't edit the `orka-admin` RoleBinding. Ask MacStadium support to enable the managed `orka-admin` service account, then mint its token with `orka sa token orka-admin`. On self-managed clusters, edit the `orka-admin` RoleBinding directly instead. See `references/commands/admin-commands.md`.
+**Service account gets Forbidden on an admin-only task:** service accounts created with `orka sa create` get developer permissions. On Orka 4.0, grant the admin role with `orka rbac add-subject --role admin --serviceaccount <SA_NS>:<SA_NAME>`, on hosted clusters too. On Orka 3.6, edit the `orka-admin` RoleBinding directly on self-managed clusters, or on MacStadium-hosted clusters ask MacStadium support to enable the managed `orka-admin` service account and mint its token with `orka3 sa token orka-admin`. See `references/commands/admin-commands.md`.
 
 ## Problem: Service account token not working
 

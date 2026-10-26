@@ -36,6 +36,7 @@ Draft, held until Orka 4.0 ships (GA around 2026-10-28). Verified against `relea
 
 ### Fixed
 
+- `admin-commands.md`, `auth-issues.md`, `SKILL.md`: said `orka rbac add-subject --role admin` doesn't work on MacStadium-hosted clusters. It does on 4.0, including for custom-domain certificate uploads (tested by engineering on a lab cluster). The managed `orka-admin` service account from support is now described as the 3.6 hosted path only.
 - `emulator-commands.md` said gRPC on an emulator configuration was CLI-only. The REST API accepts `grpc` on configuration create and returns it in configuration responses.
 - `emulator-commands.md` said `--device-profile` needed Orka 4.0. It was already in 3.7.0-alpha; 4.0 adds `--config` and `--grpc`.
 - `emulator-commands.md` documented `--device`, `--cpu`, and `--memory` on `emulator deploy`, and a `--vm` filter on `emulator list`. The CLI has never accepted any of them. Removed, with a note so they don't get reintroduced.

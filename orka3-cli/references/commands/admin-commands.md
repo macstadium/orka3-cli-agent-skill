@@ -124,12 +124,13 @@ orka sa token sa-jenkins --no-expiration
 - A service account automatically has access to the namespace it was created in, and can't be moved to another namespace
 - Individual tokens can't be revoked; only `sa delete` revokes, and it revokes all of that account's tokens. Use one service account per consumer, and rotate by minting a new token on the same account
 - `sa list` doesn't show token expiry
-- New service accounts get developer (`orka-dev`) permissions in their namespace, not admin. On Orka 3.6 there is no CLI command to add a user or service account to the `orka-admin` RoleBinding. On 4.0, `orka rbac add-subject --role admin` does it on clusters where you have cluster-level RBAC rights, but not on MacStadium-hosted clusters (see below).
+- New service accounts get developer (`orka-dev`) permissions in their namespace, not admin. On Orka 3.6 there is no CLI command to add a user or service account to the `orka-admin` RoleBinding. On 4.0, `orka rbac add-subject --role admin` does it, on MacStadium-hosted clusters too (see below).
 
 **Admin-privileged service accounts:**
-- **Self-managed and Orka Anywhere on-prem:** you have cluster-level RBAC rights. Elevate a service account by editing the `orka-admin` RoleBinding directly with `kubectl`. Elevate a user by adding them to the admin OIDC group or editing the same RoleBinding.
-- **MacStadium-hosted clusters:** customer admins can't modify the `orka-admin` RoleBinding or anything else in the `default` namespace. This is expected. For an admin service account (for example, to automate custom TLS certificate uploads to `/api/v1/upload/cert`), ask MacStadium support to enable the managed `orka-admin` service account. After that, any of your admins can mint a token with `orka sa token orka-admin`. No credentials are handed over.
-- An `orka-admin` token can also create and delete service accounts, mint their tokens, and read or update registry credentials. Store it like any admin credential. If it's exposed, invalidate it by deleting and recreating the service account.
+- **Orka 4.0, any cluster, including MacStadium-hosted:** `orka rbac add-subject --role admin --serviceaccount <SA_NS>:<SA_NAME>`. This covers admin-only API calls such as custom TLS certificate uploads to `/api/v1/upload/cert`: before the grant the service account gets `403`, after it the upload succeeds (verified by engineering on a lab cluster, October 2026). Grants apply to the admin bindings that exist at the time, so re-run it after creating a namespace.
+- **Orka 3.6, self-managed and Orka Anywhere on-prem:** you have cluster-level RBAC rights. Elevate a service account by editing the `orka-admin` RoleBinding directly with `kubectl`. Elevate a user by adding them to the admin OIDC group or editing the same RoleBinding.
+- **Orka 3.6, MacStadium-hosted:** customer admins can't modify the `orka-admin` RoleBinding or anything else in the `default` namespace. This is expected. Ask MacStadium support to enable the managed `orka-admin` service account, after which any of your admins can mint a token with `orka3 sa token orka-admin`. No credentials are handed over.
+- An admin service account's token can also create and delete service accounts, mint their tokens, and read or update registry credentials. Store it like any admin credential. If it's exposed, remove its admin role with `orka rbac remove-subject --role admin` (4.0), or delete and recreate the service account.
 
 ### orka serviceaccount list (alias: sa)
 
@@ -166,7 +167,7 @@ Every `orka rbac` command requires administrative privileges and a `--role`:
 
 The default namespace for `--role dev` follows the usual resolution: `--namespace`, then `ORKA_DEFAULT_NAMESPACE`, then the `orka` kubeconfig context, then `orka-default`.
 
-**`--role admin` isn't available to administrators on MacStadium-hosted clusters.** The command runs with your own token, and on a hosted cluster your administrator permissions don't extend to the `orka-admin` RoleBinding or anything else in the `default` namespace. `--role dev` works normally. This is by design and unchanged from earlier releases. For an administrator-privileged service account on a hosted cluster, ask MacStadium support to enable the managed `orka-admin` service account, then mint its token with `orka sa token orka-admin`.
+**`--role admin` works on MacStadium-hosted clusters.** Hosted administrators can grant the admin role to users and service accounts themselves, including the access needed to upload a custom-domain certificate, so they don't need the managed `orka-admin` service account on 4.0. That service account is still how hosted 3.6 clusters get an admin service account.
 
 ### orka rbac add-subject
 
