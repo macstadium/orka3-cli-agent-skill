@@ -28,6 +28,8 @@ Draft, held until Orka 4.0 ships (GA around 2026-10-28). Verified against `relea
 - `upgrade-workflows.md`: "Upgrading to Orka 4.0" (requires 3.6, Intel worker nodes block the upgrade at the pre-check with no changes made, schedule with support), Orka-managed PDBs and other control plane changes, and the 4.0 per-node limits (`osx_node_orka_quota_job` default `2`, node pod quota `110`, emulators uncapped).
 - `deployment-issues.md`: `Not enough disk space on node <NODE> to deploy the VM`, and Intel image or setting rejections on 4.0.
 - `image-commands.md`, `image-issues.md`: `imagecache remove --all`/`--tags` skip uncached nodes (per-node `202`) on 4.0, cache record cleanup, and the 4.0 eviction fixes.
+- `jenkins.md`: "Orka 4.0" (plugin 2.10 works; `netBoost: false` is accepted and net boost stays on; Legacy IO and GPU Passthrough are rejected when turned on). Moved here from the 3.x release.
+- `node-commands.md`: `upgradeAgent` is a 3.6-only `node list -o json` key; 4.0 doesn't return it.
 - `monitoring.md`: 4.0 operator metrics (`vm_namespace` label, pending-VM queue metrics, exponential buckets, `orka-webhooks` metrics endpoint).
 
 ### Removed

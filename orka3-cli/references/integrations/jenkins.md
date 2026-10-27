@@ -12,6 +12,7 @@ Current version: `2.10` (2026-06-04). Orka 3.x requires plugin 2.0+. On Orka 2.x
 - [Agent template fields](#agent-template-fields)
 - [Retention strategies](#retention-strategies)
 - [Permanent agents](#permanent-agents)
+- [Orka 4.0](#orka-40)
 - [Logging](#logging)
 - [Gotchas](#gotchas)
 
@@ -87,6 +88,10 @@ Templates migrated from Orka 2.x show an **Orka 2.x Deployment** option that is 
 
 Manage Jenkins > Nodes and Clouds > New Node > **Agent running under Orka by MacStadium**. Fields: Orka Token, Orka Endpoint, Namespace, Node (the Orka node to deploy on), Public Host (optional, from MacStadium), Image, # of CPUs, Memory, Tag, Tag Required, the Intel-only options, VM Credentials, Name Prefix. The VM stays up until you delete the agent.
 
+## Orka 4.0
+
+Plugin 2.10 works with Orka 4.0. The plugin sends the Use Net Boost checkbox on every deploy, so an unchecked box sends `"netBoost": false`. Orka 4.0 accepts that and sets net boost on, as 3.6 did for Apple silicon. Leave Use Legacy IO and Use GPU Passthrough unchecked: 4.0 rejects both when they're turned on.
+
 ## Logging
 
 Manage Jenkins > System Log > Add new log recorder > Loggers > Add:
@@ -103,5 +108,5 @@ Set the level to **All**. This is verbose and can slow a busy controller. For li
 - **Set Max Jenkins Agents Limit.** Left empty there is no limit, and jobs beyond slot capacity fail at deploy instead of waiting in the queue.
 - **First Apple silicon deploy is slow.** The first boot of an uncached image on an Apple silicon node takes minutes. Raise the agent connection timeout before the first deploy.
 - **"Terminate immediately after use" needs one executor.** More than one executor defeats the one-job-per-VM model.
-- **Intel-only options.** Net Boost, Legacy IO, and GPU Passthrough apply only to Intel nodes.
+- **Intel-only options.** Net Boost, Legacy IO, and GPU Passthrough apply only to Intel nodes. Leave Legacy IO and GPU Passthrough unchecked; Orka 4.0 rejects them. See [Orka 4.0](#orka-40).
 - **VPN or site-to-site connection required.** The controller initiates the API calls and the SSH connection, so it must reach both the Orka endpoint and the node IPs (or mapped public hosts).
