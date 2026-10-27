@@ -58,7 +58,11 @@ Folds in verified findings from Robert Elwell's Orka agent playbooks, which were
 - TeamCity: plugin 2.0.1 installs from the JetBrains Marketplace (no `./gradlew build`), authenticates only with a service account token (no email/password), and the profile has Namespace and Node mappings fields; added the first-ARM-deploy timeout known issue
 - Namespace resolution: `orka3 user login` and `orka3 user set-token` reset the `orka` context namespace to `orka-default`, so `ORKA_DEFAULT_NAMESPACE` is the lasting default; the precedence order applies only to `vm`, `node`, `imagecache`, `registrycredential`, `rolebinding`, `serviceaccount`; `orka3 upgrade service` always defaults to `orka-default`
 - `monitoring.md`: added the Orka server metrics target at `/api/v1/metrics` (GET check, HEAD returns 404)
-- VM Tools version guidance: match the cluster's release line, not its exact version (a 3.6.4 cluster runs VM Tools 3.6.0)
+- VM Tools version guidance: any VM Tools 3.6.0 or later work on both 3.6 and 4.0 clusters (the 4.0.0 Homebrew release includes the OK-6360 fix for 3.6 hosts); 4.0 VM Tools are needed only for User Data
+- VM metadata: Orka reserves six exact keys (`orka_vm_id`, `orka_vm_name`, `orka_base_image`, `orka_cpu`, `orka_memory`, `orka_node_name`), not the `orka_` prefix
+- Image cache: a cache job requests 0.5 CPU from the scheduler, separate from what it uses; disk I/O is what slows running VMs. Eviction removes the least recently used images, not the oldest
+- `monitoring.md`: node exporter is installed by MacStadium's provisioning, so it's only present on MacStadium-hosted clusters
+- `upgrade-workflows.md`: removed the claim that service account tokens must be regenerated after an upgrade; no release note requires it
 - Android emulator commands: `--platform` and `--image-type` are required with no defaults, the device flag is `--device-profile`, `emulator list` has no `--vm` filter, and connection details are `RELAY-IP`/`RELAY-PORT` (`relayIp`/`relayPort`), not `adbRelayIP`/`adbRelayPort`
 - `-o json` examples: `.[]` and `.[0].name`, not `.items[]` or `.name`
 - `orka3 vmc create` examples no longer pass `--namespace` (the flag doesn't exist)
@@ -82,8 +86,9 @@ Folds in verified findings from Robert Elwell's Orka agent playbooks, which were
 - `references/commands/admin-commands.md`: cross-reference note on the same `--enable-custom-pods` role binding fix under `orka3 namespace create`
 - `references/workflows/upgrade-workflows.md`: real Upgrade Service v2 self-service command flow (`orka3 upgrade run/status/history/versions`, `orka3 upgrade service status/agents`), replacing the stale v1 "MacStadium pushes upgrades" description
 - `references/workflows/upgrade-workflows.md`: new "Orka Anywhere upgrades (self-service, AWS-hosted or on-premises)" section — Ansible-based idempotent re-upgrade process, `osx_node_orka_engine_version`/`osx_node_orka_vk_version` version-pin vars, and the v1→v2 Upgrade Service migration script for Anywhere clusters
-- `references/workflows/upgrade-workflows.md`: new "Host node macOS upgrades (3.7.0-alpha+)" section — macOS Tahoe host node upgrade support and the tunable per-node pod quota (`osx_node_orka_quota_pod`, default `4`)
-- `SKILL.md`: Essential Context bullets for the pod quota/Tahoe upgrade facts and the self-service (not support-ticket-only) upgrade model for both MSDC and Orka Anywhere
+- `references/workflows/upgrade-workflows.md`: new "Per-node pod quota (Apple silicon)" section, split by version: 3.6 fixed default of `4`, 3.7.0-alpha tunable `osx_node_orka_quota_pod` (default `4`), 4.0 `osx_node_orka_quota_pod` of `110` plus `osx_node_orka_quota_job` (default `2`) for cache and push jobs
+- `references/workflows/upgrade-workflows.md` and `SKILL.md`: upgrading to Orka 4.0 is support-led; the Upgrade Service can't perform it yet
+- `SKILL.md`: Essential Context bullets for the per-node pod quota and the self-service (not support-ticket-only) upgrade model for both MSDC and Orka Anywhere
 - `references/troubleshooting/image-issues.md`: new "Problem: `imagecache remove` fails or isn't recognized despite an up-to-date CLI" entry — this is a cluster-side version gate (3.6.3+), not a CLI one, a real, repeated customer point of confusion
 - `references/workflows/upgrade-workflows.md`: Upgrade Service troubleshooting (30-minute admission limit, quarantined releases, `STALE` after 90 seconds without a lease renewal, skip reasons in `upgrade status -o json`), read-only access for status/history/versions, and availability by deployment
 - `references/workflows/upgrade-workflows.md`: Webhooks PodDisruptionBudget guidance for 3.6 vs. 4.0, including deleting a custom `app: orka-webhooks` PDB before upgrading to 4.0

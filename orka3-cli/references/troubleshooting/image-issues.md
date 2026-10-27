@@ -125,7 +125,7 @@ orka3 node list --output wide
 - Deploys of an image that were taking about 5 seconds now take about 4 minutes on some nodes
 - `orka3 ic info <IMAGE>` no longer lists the image on those nodes
 
-**Cause:** When a node is short on disk, deploying an uncached image there evicts the oldest cached images. Nothing reports the eviction; the next deploy of an evicted image is a cold pull.
+**Cause:** When a node is short on disk, deploying an uncached image there evicts the least recently used cached images. Nothing reports the eviction; the next deploy of an evicted image is a cold pull.
 
 **Solutions:**
 ```bash

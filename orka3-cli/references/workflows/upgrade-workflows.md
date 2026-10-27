@@ -4,13 +4,15 @@
 
 Self-service as of Orka 3.6+ via the Upgrade Service (v2), started and monitored from the `orka3` CLI. See [Upgrade Service (self-service, 3.6+)](#upgrade-service-self-service-36) below for the full command flow. Only fall back to a MacStadium support ticket if the cluster hasn't completed its v1→v2 migration yet, or for anything the Upgrade Service doesn't cover (Kubernetes control-plane version changes, hardware changes).
 
+**Upgrading to Orka 4.0 is support-led.** The Upgrade Service can't perform a 3.6 to 4.0 upgrade yet, so don't use `orka3 upgrade run` for it. Contact [MacStadium support](mailto:support@macstadium.com) to schedule a 4.0 upgrade. The cluster must be on Orka 3.6 first, and a cluster with Intel worker nodes can't upgrade to 4.0.
+
 ### Process
 1. Review release notes for the target version
 2. Confirm Upgrade Service and node agents are healthy: `orka3 upgrade versions`, `orka3 upgrade service status`, `orka3 upgrade service agents`
 3. Start the run: `orka3 upgrade run --version <VERSION>` (admin access required)
 4. Monitor: `orka3 upgrade status <RUN_NAME>`
-5. After upgrade: download the new CLI version and regenerate service account tokens if this was a full version upgrade (or if the release notes require it)
-6. Update Orka VM Tools in custom golden images (`brew upgrade orka-vm-tools`) and republish them. Match the cluster's release line (3.x cluster, 3.x VM Tools). VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release, so a 3.6.4 cluster runs VM Tools 3.6.0. A VM Tools mismatch breaks disk resize and shared storage on Apple silicon.
+5. After upgrade: download the new CLI version
+6. Check Orka VM Tools in custom golden images. Any VM Tools 3.6.0 or later work on both 3.6 and 4.0 clusters; VM Tools 4.0 is required only for 4.0's User Data feature. To update, run `brew upgrade orka-vm-tools` in the image and republish it. VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release.
 
 ### Checking component versions
 
@@ -44,10 +46,8 @@ Compare the version number only, against the [component version matrix](https://
 - Registry credentials (Virtualization/Orchestration layer upgrades only)
 - Custom Kubernetes Pods and services (Virtualization/Orchestration layer upgrades only)
 
-**Critical:** Service account tokens must be regenerated after a full version upgrade. Any automated workflows using SA tokens will fail until regenerated.
-
 ### Patch version upgrades (x.y.Z)
-Zero-downtime. No maintenance window required. Running VMs, SA tokens, and image cache all preserved.
+Zero-downtime. No maintenance window required. Running VMs and image cache are preserved.
 
 **Note:** Adding Mac compute nodes requires the latest patch version. Node additions will fail on older patch versions.
 
@@ -247,10 +247,10 @@ Requires `kubectl` (admin context) and `jq`, plus outbound HTTPS to distribution
 AWS_DEFAULT_REGION=<AWS_REGION> ansible-playbook -i arm.ssh.aws_ec2.yml /ansible/deploy-upgrade-service.yml --private-key ~/.ssh/id_rsa
 ```
 
-## Host node macOS upgrades (3.7.0-alpha+)
+## Per-node pod quota (Apple silicon)
 
-Orka can upgrade existing Apple silicon host nodes to macOS Tahoe (26) as of 3.7.0-alpha; earlier 3.7.0-alpha builds only recognized Sequoia as an upgrade target. This is the physical host's OS, not a guest VM's OS, and is unrelated to the Orka version upgrades above.
+Each Apple silicon node advertises a pod quota to the Kubernetes scheduler. What it limits depends on the Orka version:
 
-Multi-node host OS upgrades are throttled to avoid overloading the control plane on large clusters, and transient node-tooling failures during an upgrade now retry automatically instead of failing the whole run.
-
-**Per-node pod quota (3.7.0-alpha+):** each Apple silicon node advertises a pod quota to the Kubernetes scheduler, how many VM, emulator, and image-cache job pods it can run at once. Default is `4`, tunable via the `osx_node_orka_quota_pod` Ansible variable. If running Android emulators, plan for headroom: a node running two VMs and their two paired emulators is already at the default quota, leaving no room for an image-cache job until one finishes. Contact MacStadium support to have the quota raised for a cluster.
+- **Orka 3.6:** the Virtual Kubelet's built-in default (`ORKA_QUOTA_POD`) is `4` pods per node. The 3.6 Ansible has no variable for it.
+- **Orka 3.7.0-alpha:** default `4`, now tunable with the `osx_node_orka_quota_pod` Ansible variable, and it counts VM, emulator, and image-cache job pods together. If running Android emulators, plan for headroom: a node running two VMs and their two paired emulators is already at the default, leaving no room for an image-cache job until one finishes. Contact MacStadium support to have the quota raised for a cluster.
+- **Orka 4.0:** `osx_node_orka_quota_pod` defaults to `110` and is sized never to bind. VMs are capped by `osx_node_orka_quota_vm` (2 per node, 1 with shared disk), and image-cache, cache-remove, and registry-push jobs get their own per-node budget, `osx_node_orka_quota_job` (default `2`). Surplus jobs wait `Pending` rather than fail. Emulators aren't capped, so two VMs and two emulators no longer block a cache job.
