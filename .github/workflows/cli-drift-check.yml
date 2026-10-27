@@ -1,0 +1,60 @@
+# Checks the skill's commands and flags against the released CLI's own help
+# (the hidden `docs generate` command). See scripts/cli-drift-check.py.
+#
+# CLI_VERSION is the CLI the skill documents, and pull requests check against
+# it. Bump it when the skill moves to a new release: 3.x versions download
+# `orka3`, 4.0 and later `orka`. The Monday run checks the latest released `orka`
+# CLI instead (official/orka/latest.json, written by the CLI release workflow),
+# so it fails when a new release changes commands or flags the skill uses.
+name: CLI drift check
+
+on:
+  pull_request:
+    paths:
+      - "orka3-cli/**"
+      - "scripts/cli-drift-check.py"
+      - ".github/workflows/cli-drift-check.yml"
+  schedule:
+    - cron: "0 13 * * 1" # Mondays, against the latest CLI release
+  workflow_dispatch:
+    inputs:
+      cli_version:
+        description: "CLI version to check against (default: CLI_VERSION below)"
+        required: false
+
+env:
+  CLI_VERSION: "4.0.0"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Pick the CLI version
+        env:
+          INPUT_VERSION: ${{ inputs.cli_version }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then
+            version="$INPUT_VERSION"
+          elif [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+            version=$(curl -fsSL https://cli-builds-public.s3.amazonaws.com/official/orka/latest.json | jq -er .version)
+          else
+            version="$CLI_VERSION"
+          fi
+          echo "Checking against CLI $version"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Download the CLI
+        run: |
+          major="${VERSION%%.*}"
+          if [ "$major" -ge 4 ]; then name=orka; else name=orka3; fi
+          curl -fsSL "https://cli-builds-public.s3.amazonaws.com/official/${VERSION}/${name}/linux/amd64/${name}.tar.gz" | tar -xz -C "$RUNNER_TEMP"
+          "$RUNNER_TEMP/${name}" version --client
+          echo "CLI_NAME=${name}" >> "$GITHUB_ENV"
+
+      - name: Compare with the skill
+        run: python3 scripts/cli-drift-check.py --cli "$RUNNER_TEMP/$CLI_NAME" --binary-name "$CLI_NAME"
