@@ -127,11 +127,11 @@ orka ic add sonoma:latest --tags jenkins-builds
 - `--nodes`, `--tags`, and `--all` are mutually exclusive
 - An OCI reference without a tag means `:latest`
 - Before 3.5.1, `imagecache add` into a custom namespace silently did nothing
-- Each cache job uses about 0.5 CPU and heavy disk I/O, which slows running VMs and the scheduler. Caching several images at once is faster than one after another
+- Each cache job requests 0.5 CPU, which takes it out of the node's schedulable capacity while the job runs, separate from what it actually uses. Its heavy disk I/O is what slows running VMs. Caching several images at once is faster than one after another
 
 **Cache behavior:**
 - First deploy of an uncached image on a node takes about 4 minutes; a cached deploy takes about 5 seconds
-- When node disk is short, deploying an uncached image evicts the oldest cached images
+- When node disk is short, deploying an uncached image evicts the least recently used cached images
 - Orka 4.0 eviction fixes: eviction frees only the shortfall (3.6 could evict several images to make room for one), rejects up front when evicting can't help, skips images an in-progress deployment is using, and the node's image list refreshes after evictions, so evicted images no longer show `Ready`
 - Re-caching an image committed under the same name and tag: on 3.6.3 and later 3.6 releases, `imagecache add` could report it as already cached on nodes where a deploy had cached it and skip it. Fixed in Orka 4.0 (see `references/troubleshooting/image-issues.md`)
 

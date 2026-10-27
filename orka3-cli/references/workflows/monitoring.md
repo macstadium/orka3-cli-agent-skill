@@ -16,7 +16,7 @@ This guide covers collecting Orka metrics with Prometheus and the alerts that ma
 |--------|----------|-------|
 | Orka server (API) | `http://<ORKA_LB_IP>/api/v1/metrics` | Go runtime and process metrics only (`go_goroutines`, `process_resident_memory_bytes`). The path is `/api/v1/metrics`, not `/metrics`. Mostly relevant if you use integrations that still rely on the legacy API server |
 | Orka operator | `http://<ORKA_LB_IP>:8080/metrics` | VM lifecycle metrics. `<ORKA_LB_IP>` is usually `10.221.188.20` or `10.221.188.100`; check the IP Allocation table in My Cloud (MacStadium Portal) |
-| Node exporter | `http://<NODE_IP>:9100/metrics` | Runs on every node, Intel, Apple silicon, and control plane. Mac nodes run the Homebrew darwin build of `node_exporter` |
+| Node exporter | `http://<NODE_IP>:9100/metrics` | MacStadium-hosted clusters only: MacStadium's provisioning installs it on every node, Intel, Apple silicon, and control plane, and Mac nodes run the Homebrew darwin build of `node_exporter`. On-prem clusters don't get it on Mac nodes |
 | GitHub Actions integration | `http://<GHA_RUNNER_HOST>:8080/metrics` | Opt-in with `ENABLE_METRICS=true`. See [github-actions.md](../integrations/github-actions.md#metrics) |
 | Harbor registry (3.5+) | Ask MacStadium support | Clusters using Harbor OCI storage |
 
@@ -133,7 +133,7 @@ Check the names your exporter actually exposes with `curl http://<NODE_IP>:9100/
 
 ## Alerts worth having
 
-- **Node disk usage.** When a node runs short of disk, deploying an uncached image evicts the oldest cached images. Nothing errors, but deploys of the evicted images go from about 5 seconds to about 4 minutes. Alert well before the disk is full:
+- **Node disk usage.** When a node runs short of disk, deploying an uncached image evicts the least recently used cached images. Nothing errors, but deploys of the evicted images go from about 5 seconds to about 4 minutes. Alert well before the disk is full:
 
   ```promql
   1 - node_filesystem_avail_bytes{job="orka/node-exporter",fstype!~"tmpfs|devfs|autofs|nullfs|overlay"}
@@ -155,5 +155,5 @@ On Apple silicon, the 2-VM-per-node limit is usually reached long before CPU sat
 ## Gotchas
 
 - **Operator metrics are cluster-wide.** You can't split them by namespace or node on 3.6. Use node exporter labels for per-node views.
-- **Caching slows co-located VMs.** Each image cache job uses CPU and heavy disk I/O. Correlate disk-write spikes on a node with cache operations before blaming the build.
+- **Caching slows co-located VMs.** Each image cache job does heavy disk I/O (and requests 0.5 CPU from the scheduler). Correlate disk-write spikes on a node with cache operations before blaming the build.
 - **Burst nodes:** label them in your scrape config (or tag them in Orka) so dashboards can separate burst capacity from fixed capacity. See [burst-workflows.md](burst-workflows.md).

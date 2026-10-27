@@ -125,7 +125,7 @@ orka node list --output wide
 - Deploys of an image that were taking about 5 seconds now take about 4 minutes on some nodes
 - `orka ic info <IMAGE>` no longer lists the image on those nodes
 
-**Cause:** When a node is short on disk, deploying an uncached image there evicts the oldest cached images. Nothing reports the eviction; the next deploy of an evicted image is a cold pull.
+**Cause:** When a node is short on disk, deploying an uncached image there evicts the least recently used cached images. Nothing reports the eviction; the next deploy of an evicted image is a cold pull.
 
 **Orka 4.0 changes:** eviction frees only the shortfall instead of the full required size, rejects the operation up front when evicting can't help (on 3.6 it could empty the cache and still reject), skips images an in-progress deployment is using (on 3.6 that failed the deploy with `The file "disk.img" couldn't be opened`), and counts space macOS reports late. Evicted images no longer linger as `Ready` in `imagecache` output. On 4.0 you should see far fewer surprise cold pulls, but re-cache the same way if you do.
 
