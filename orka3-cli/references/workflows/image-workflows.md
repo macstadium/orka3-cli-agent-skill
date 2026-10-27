@@ -162,7 +162,7 @@ orka3 ic add ghcr.io/your-org/orka-images/custom-sonoma:v1.3 --all
 
 ## Apple Silicon Image Known Issues
 
-- **Use Orka VM Tools 3.6.0 or later.** Any VM Tools from 3.6.0 on work on both 3.6 and 4.0 clusters, and `brew upgrade orka-vm-tools` (which now installs 4.0.0) is safe on a 3.6 cluster. VM Tools 4.0 is required only for 4.0's User Data feature. VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release, so don't expect the VM Tools version to equal the cluster version.
+- **Use Orka VM Tools 3.6.0 or later.** Any VM Tools from 3.6.0 on work on both 3.6 and 4.0 clusters, and `brew upgrade orka-vm-tools` (which now installs 4.0.0) is safe on a 3.6 cluster. To pin a version instead, install `https://orka-tools.s3.amazonaws.com/orka-vm-tools/official/<VERSION>/orka-vm-tools.pkg`. VM Tools 4.0 is required only for 4.0's User Data feature. VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release, so don't expect the VM Tools version to equal the cluster version.
 - **Upgrade macOS before resizing the disk.** A macOS upgrade can fail on a resized VM. Upgrade first and resize last. If you've already resized, start from an unresized image.
 - **Provisioning UDID isn't stable across deploys on Sequoia.** If signing needs a stable Provisioning UDID, build from a Sonoma base image, upgrade the guest to Sequoia in place, then save the image.
 

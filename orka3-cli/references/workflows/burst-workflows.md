@@ -33,7 +33,7 @@ Mutations need the opaque cluster `id`, not the human-readable `displayId`. Look
 curl -X POST https://portal.macstadium.com/graphql \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $PORTAL_TOKEN" \
-  -d '{"query":"{ viewer { account { orkaServices(pagination:{offset:0,limit:50}) { edges { node { id displayId } } } } } }"}'
+  -d '{"query":"{ viewer { account { orkaServices(pagination:{offset:0,limit:50}) { nodes { id displayId } } } } }"}'
 ```
 
 Check burst status:

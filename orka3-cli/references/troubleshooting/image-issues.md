@@ -116,7 +116,7 @@ orka3 node list --output wide
 # 5. If cache fails persistently, contact MacStadium support
 ```
 
-**`imagecache add` into a custom namespace does nothing (clusters before 3.5.1):** on clusters older than 3.5.1, `imagecache add` with `--namespace` set to a custom namespace silently did nothing. Upgrade the cluster to 3.5.1 or later, then run `imagecache add` again.
+**`imagecache add` into a custom namespace doesn't work (clusters before 3.5.2):** on clusters older than 3.5.1, `imagecache add` with `--namespace` set to a custom namespace silently did nothing. On 3.5.1, caching a new image works, but an image already cached on the node never reaches `Ready`. Upgrade the cluster to 3.5.2 or later, then run `imagecache add` again.
 
 ## Problem: Deploys that used to be fast are slow again (cache eviction)
 
@@ -124,7 +124,7 @@ orka3 node list --output wide
 - Deploys of an image that were taking about 5 seconds now take about 4 minutes on some nodes
 - `orka3 ic info <IMAGE>` no longer lists the image on those nodes
 
-**Cause:** When a node is short on disk, deploying an uncached image there evicts the least recently used cached images. Nothing reports the eviction; the next deploy of an evicted image is a cold pull.
+**Cause:** When an image being pulled needs more space than is free on the node's data volume, the deploy evicts cached images, least recently accessed first, until enough space is free. There is no percentage threshold. Nothing reports the eviction; the next deploy of an evicted image is a cold pull.
 
 **Solutions:**
 ```bash
