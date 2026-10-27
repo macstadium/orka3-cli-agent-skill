@@ -127,7 +127,7 @@ orka3 ic add sonoma:latest --tags jenkins-builds
 
 **Cache behavior:**
 - First deploy of an uncached image on a node takes about 4 minutes; a cached deploy takes about 5 seconds
-- When the image being pulled needs more space than is free on the node's data volume, the deploy evicts cached images, least recently accessed first, until enough space is free. There is no percentage threshold
+- When the image being pulled needs more space than is free on the node's data volume, the deploy evicts cached images, least recently accessed first, until it has reclaimed the image's full size (not only the shortfall), so it can evict more than it needs to. There is no percentage threshold
 
 ### orka3 imagecache remove (alias: ic), v3.6.3+
 
