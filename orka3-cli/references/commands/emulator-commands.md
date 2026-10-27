@@ -219,11 +219,11 @@ If the deploy prints `Warning: gRPC was requested but the emulator reports no gR
 
 ## Sizing and density
 
-Each emulator runs on the host next to the VMs, so it uses host memory and CPU on top of theirs. An emulator's CPU and memory come from its device profile; you can't set them at deploy time.
+Each emulator runs on the host next to the VMs, so it uses host memory and CPU on top of theirs. An emulator's CPU and memory come from its device profile, and you can't set them at deploy time.
 
-- **Plan for about 5 to 6 GB of host memory per emulator.** In MacStadium's capacity testing, a default `pixel_9` emulator (4 cores and about 2.5 GB of guest RAM) used about 5.7 GB of host memory.
-- **Memory usually limits how many emulators a node can run.** Add the emulators' memory to the memory of the VMs on the node, and leave room for the host itself. Four emulators use about 23 GB of host memory, which leaves little room for VMs on a 32 GB node.
-- **Emulators slow down first when a node runs short of memory.** UI and screenshot tests can then become flaky, for example with small pixel shifts between runs. Try fewer emulators per node.
+- **Plan for about 5 to 6 GB of host memory per emulator.** In MacStadium's capacity testing, an emulator using the `pixel_9` profile (4 cores and about 2.5 GB of guest RAM) used about 5.7 GB of host memory.
+- **Memory usually limits how many emulators a node can run.** Add the emulators' memory to the memory of the VMs on the node, and leave room for the host itself. For example, four emulators use about 23 GB of host memory, which leaves little room for VMs on a 32 GB node.
+- **Emulators slow down first when a node is busy.** Orka runs emulators at a lower scheduling priority than VMs, so under CPU or memory contention the emulator loses first. Emulators also render in software on the CPU, so a busy CPU affects them before memory runs out. UI and screenshot tests can then become flaky, for example with small pixel shifts between runs. If you see this, try fewer emulators per node.
 - Orka 4.0 doesn't cap emulators per node in the scheduler (see the pod quota notes in `references/workflows/upgrade-workflows.md`), so this sizing is on you.
 
 For UI and screenshot tests, turn off animations in the emulator after you connect:

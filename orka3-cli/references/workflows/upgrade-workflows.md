@@ -4,7 +4,7 @@
 
 Self-service as of Orka 3.6+ via the Upgrade Service (v2), started and monitored from the `orka` CLI. See [Upgrade Service (self-service, 3.6+)](#upgrade-service-self-service-36) below for the full command flow. Only fall back to a MacStadium support ticket if the cluster hasn't completed its v1→v2 migration yet, or for anything the Upgrade Service doesn't cover (Kubernetes control-plane version changes, hardware changes).
 
-**Upgrading to Orka 4.0 is support-led.** The Upgrade Service can't perform a 3.6 to 4.0 upgrade yet, so don't use `orka3 upgrade run` for it. Contact [MacStadium support](mailto:support@macstadium.com) to schedule a 4.0 upgrade. The cluster must be on Orka 3.6 first, and a cluster with Intel worker nodes can't upgrade to 4.0.
+**Upgrading to Orka 4.0 is support-led.** The Upgrade Service can't perform a 3.6 to 4.0 upgrade yet, so don't start an `upgrade run` for it. See [Upgrading to Orka 4.0](#upgrading-to-orka-40).
 
 ### Process
 1. Review release notes for the target version
@@ -17,10 +17,10 @@ Self-service as of Orka 3.6+ via the Upgrade Service (v2), started and monitored
 ### Upgrading to Orka 4.0
 
 - **Orka 3.6 first.** Upgrading to 4.0.0 requires Orka 3.6. If the cluster runs an earlier version, upgrade to the latest 3.6 release first.
-- **No Intel worker nodes.** Orka 4.0 runs on Apple silicon only. The upgrade checks for Intel worker nodes and stops before making any changes (the pre-check reports `Orka 4.0 does not support Intel worker nodes; remove them first:` followed by the node names). Remove the Intel nodes first, or keep the cluster on Orka 3.6, which MacStadium supports through March 2028.
-- **Schedule it with support.** Contact [MacStadium support](mailto:support@macstadium.com) to schedule a 4.0 upgrade.
+- **No Intel worker nodes.** Orka 4.0 runs on Apple silicon only. The upgrade checks for Intel worker nodes and stops before making any changes (the pre-check reports `Orka 4.0 does not support Intel worker nodes. Remove these nodes from the cluster first:` followed by the node names). Remove the Intel nodes first, or keep the cluster on Orka 3.6, which MacStadium supports through March 2028.
+- **Schedule it with support.** The upgrade to 4.0 is support-led: the Upgrade Service can't perform it yet. Contact [MacStadium support](mailto:support@macstadium.com) to schedule it.
 - **Before the upgrade:** delete any PodDisruptionBudget of your own that selects `app: orka-webhooks` (4.0 creates its own; see [Kubernetes Upgrades](#kubernetes-upgrades)). Check scripts and pipelines for the removed Intel commands and flags and the deprecated NFS image commands (`references/commands/vm-commands.md`, `references/commands/image-commands.md`).
-- **After the upgrade:** install the 4.0 `orka` CLI (see the CLI section in `SKILL.md`), and update Orka VM Tools in golden images to 4.0 before relying on VM User Data. A 3.6 `osx_node_orka_quota_pod` override for emulators or cache jobs is no longer needed (see [Host node pod quota](#host-node-macos-upgrades-370-alpha)).
+- **After the upgrade:** install the 4.0 `orka` CLI (see the CLI section in `SKILL.md`), and update Orka VM Tools in golden images to 4.0 before relying on VM User Data. Per-node limits change in 4.0 (see [Per-node pod quota](#per-node-pod-quota-apple-silicon)).
 
 Full list of changes: [Orka 4.0.0 release notes](https://docs.macstadium.com/orka/orka-upgrades-and-release-notes/orka-release-notes).
 
@@ -264,14 +264,10 @@ Each Apple silicon node advertises a pod quota to the Kubernetes scheduler. What
 
 - **Orka 3.6:** the Virtual Kubelet's built-in default (`ORKA_QUOTA_POD`) is `4` pods per node. The 3.6 Ansible has no variable for it.
 - **Orka 3.7.0-alpha:** default `4`, now tunable with the `osx_node_orka_quota_pod` Ansible variable, and it counts VM, emulator, and image-cache job pods together. If running Android emulators, plan for headroom: a node running two VMs and their two paired emulators is already at the default, leaving no room for an image-cache job until one finishes. Contact MacStadium support to have the quota raised for a cluster.
-- **Orka 4.0:** `osx_node_orka_quota_pod` defaults to `110` and is sized never to bind. VMs are capped by `osx_node_orka_quota_vm` (2 per node, 1 with shared disk), and image-cache, cache-remove, and registry-push jobs get their own per-node budget, `osx_node_orka_quota_job` (default `2`). Surplus jobs wait `Pending` rather than fail. Emulators aren't capped, so two VMs and two emulators no longer block a cache job.
+- **Orka 4.0:** the shared cap is gone.
+  - Image-cache, cache-remove, and registry-push jobs have their own per-node budget, `osx_node_orka_quota_job` (default `2`). Surplus jobs wait `Pending` rather than fail. They no longer compete with VMs or emulators.
+  - `osx_node_orka_quota_pod` is `110`, the Kubernetes default, and is sized never to bind, so it no longer limits VMs, emulators, and jobs together. VMs keep their own limit, `osx_node_orka_quota_vm` (2 per Apple silicon node, 1 with shared disk).
+  - Emulators aren't capped. They're counted per node, so `kubectl describe node` shows how many are running. Memory is the practical limit (see emulator sizing in `references/commands/emulator-commands.md`).
+  - The Kubernetes scheduler places emulators on their paired VM's node. If it can't, for example because the node is cordoned, the emulator stays `Pending` with the scheduler's reason, and fails with `EmulatorUnschedulable` after 5 minutes.
 
-**Per-node pod quota (Orka 3.6 and the 3.7.0-alpha):** each Apple silicon node advertises one shared pod quota to the Kubernetes scheduler, covering VM, emulator, and image-cache job pods. Default is `4`, tunable via the `osx_node_orka_quota_pod` Ansible variable. If running Android emulators, plan for headroom: a node running two VMs and their two paired emulators is already at the default quota, leaving no room for an image-cache job until one finishes. Contact MacStadium support to have the quota raised for a cluster.
-
-**Per-node limits on Orka 4.0:** the shared cap is gone.
-- Image-cache and push jobs have their own per-node budget, default `2`, tunable with the `osx_node_orka_quota_job` Ansible variable. They no longer compete with VMs or emulators.
-- The node pod quota (`osx_node_orka_quota_pod`) is `110`, the Kubernetes default, so it no longer limits VMs, emulators, and jobs together. VMs keep their own limit (2 per Apple silicon node).
-- Emulators aren't capped. They're counted per node, so `kubectl describe node` shows how many are running. Memory is the practical limit (see emulator sizing in `references/commands/emulator-commands.md`).
-- The Kubernetes scheduler places emulators on their paired VM's node. If it can't, for example because the node is cordoned, the emulator stays `Pending` with the scheduler's reason, and fails with `EmulatorUnschedulable` after 5 minutes.
-
-If you raised `osx_node_orka_quota_pod` on 3.6 to make room for emulators or cache jobs, you don't need that override on 4.0.
+If you raised `osx_node_orka_quota_pod` on the 3.7.0-alpha to make room for emulators or cache jobs, you don't need that override on 4.0.

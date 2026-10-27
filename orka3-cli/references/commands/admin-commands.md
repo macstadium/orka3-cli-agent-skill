@@ -130,7 +130,7 @@ orka sa token sa-jenkins --no-expiration
 - **Orka 4.0, any cluster, including MacStadium-hosted:** `orka rbac add-subject --role admin --serviceaccount <SA_NS>:<SA_NAME>`. This covers admin-only API calls such as custom TLS certificate uploads to `/api/v1/upload/cert`: before the grant the service account gets `403`, after it the upload succeeds (verified by engineering on a lab cluster, October 2026). Grants apply to the admin bindings that exist at the time, so re-run it after creating a namespace.
 - **Orka 3.6, self-managed and Orka Anywhere on-prem:** you have cluster-level RBAC rights. Elevate a service account by editing the `orka-admin` RoleBinding directly with `kubectl`. Elevate a user by adding them to the admin OIDC group or editing the same RoleBinding.
 - **Orka 3.6, MacStadium-hosted:** customer admins can't modify the `orka-admin` RoleBinding or anything else in the `default` namespace. This is expected. Ask MacStadium support to enable the managed `orka-admin` service account, after which any of your admins can mint a token with `orka3 sa token orka-admin`. No credentials are handed over.
-- An admin service account's token can also create and delete service accounts, mint their tokens, and read or update registry credentials. Store it like any admin credential. If it's exposed, remove its admin role with `orka rbac remove-subject --role admin` (4.0), or delete and recreate the service account.
+- An admin service account's token can also create and delete service accounts, mint their tokens, and read or update registry credentials. Store it like any admin credential. If it's exposed, delete the service account: tokens can't be revoked one at a time, and removing the admin role doesn't invalidate the token. Don't use `orka rbac remove-subject --role admin` for this: it also strips the `orka-dev` access the service account had from creation.
 
 ### orka serviceaccount list (alias: sa)
 
@@ -222,7 +222,13 @@ orka rbac remove-subject --role dev --namespace orka-test --serviceaccount orka-
 
 ## RBAC Commands (Rolebinding, deprecated in Orka 4.0)
 
-Deprecated in Orka 4.0, in favor of `orka rbac ... --role dev`. They still work and behave the same, but on 4.0 they print `Command "rolebinding" is deprecated, use "orka rbac" with "--role dev" instead` to stderr and no longer appear in `--help`. Scripts that parse stderr will see the extra line. The `/api/v1/namespaces/{namespace}/rolebindings/orka-dev/subjects` routes are deprecated alongside them, replaced by `/api/v1/rbac`.
+Deprecated in Orka 4.0, in favor of `orka rbac ... --role dev`. They still work and behave the same, but on 4.0 they no longer appear in `--help` and each subcommand prints its own deprecation to stderr:
+
+- `Command "add-subject" is deprecated, use "orka rbac add-subject --role dev --namespace TARGET_NAMESPACE" instead`
+- `Command "list-subjects" is deprecated, use "orka rbac list-subjects --role dev --namespace TARGET_NAMESPACE" instead`
+- `Command "remove-subject" is deprecated, use "orka rbac remove-subject --role dev --namespace TARGET_NAMESPACE" instead`
+
+A bare `orka rolebinding` prints `Command "rolebinding" is deprecated, use "orka rbac" with "--role dev" instead`. Scripts that parse stderr will see the extra line. The `/api/v1/namespaces/{namespace}/rolebindings/orka-dev/subjects` routes are deprecated alongside them, replaced by `/api/v1/rbac`.
 
 | Deprecated | Replacement |
 |---|---|
