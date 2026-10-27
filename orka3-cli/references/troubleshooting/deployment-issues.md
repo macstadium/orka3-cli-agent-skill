@@ -269,7 +269,13 @@ orka node list --namespace <TARGET_NAMESPACE>
 ## Problem: Tag required but no tagged nodes available
 
 **Symptoms:**
-- `Required Tag "<TAG>" is not available. Verify that there are nodes with the tag that have enough available resources or deploy the VM without the required tag.`
+- A multi-line message (match on `Required Tag "<TAG>" is not available.`, since a single-line match on the full text misses):
+  ```
+  Required Tag "<TAG>" is not available.
+  Verify that there are nodes with the tag
+  that have enough available resources
+  or deploy the VM without the required tag.
+  ```
 - `Cannot deploy with required tag "<TAG>". Verify that there are nodes with the tag that have enough available resources or deploy the VM without the required tag.`
 
 **Solutions:**

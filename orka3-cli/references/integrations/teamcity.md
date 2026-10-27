@@ -13,7 +13,7 @@ Repo: https://github.com/macstadium/orka-teamcity-plugin
 
 A TeamCity server plugin that adds Orka as a cloud agent provider. Once a per-project cloud profile is configured, TeamCity provisions ephemeral Orka VMs as build agents on demand and tears them down after jobs complete. No scripting required: all lifecycle management happens inside TeamCity.
 
-Current plugin release: 2.0.1, published on the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/13662-orka-by-macstadium).
+Current plugin release: 2.0.2 (2026-06-24), published on the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/13662-orka-by-macstadium).
 
 ## Requirements
 

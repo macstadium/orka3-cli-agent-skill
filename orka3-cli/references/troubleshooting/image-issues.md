@@ -117,7 +117,7 @@ orka node list --output wide
 # 5. If cache fails persistently, contact MacStadium support
 ```
 
-**`imagecache add` into a custom namespace does nothing (clusters before 3.5.1):** on clusters older than 3.5.1, `imagecache add` with `--namespace` set to a custom namespace silently did nothing. Upgrade the cluster to 3.5.1 or later, then run `imagecache add` again.
+**`imagecache add` into a custom namespace doesn't work (clusters before 3.5.2):** on clusters older than 3.5.1, `imagecache add` with `--namespace` set to a custom namespace silently did nothing. On 3.5.1, caching a new image works, but an image already cached on the node never reaches `Ready`. Upgrade the cluster to 3.5.2 or later, then run `imagecache add` again.
 
 ## Problem: Deploys that used to be fast are slow again (cache eviction)
 
@@ -125,7 +125,7 @@ orka node list --output wide
 - Deploys of an image that were taking about 5 seconds now take about 4 minutes on some nodes
 - `orka ic info <IMAGE>` no longer lists the image on those nodes
 
-**Cause:** When a node is short on disk, deploying an uncached image there evicts the least recently used cached images. Nothing reports the eviction; the next deploy of an evicted image is a cold pull.
+**Cause:** When an image being pulled needs more space than is free on the node's data volume, the deploy evicts cached images, least recently accessed first, until it has reclaimed the image's full size (not only the shortfall). There is no percentage threshold. Nothing reports the eviction; the next deploy of an evicted image is a cold pull.
 
 **Orka 4.0 changes:** eviction frees only the shortfall instead of the full required size, rejects the operation up front when evicting can't help (on 3.6 it could empty the cache and still reject), skips images an in-progress deployment is using (on 3.6 that failed the deploy with `The file "disk.img" couldn't be opened`), and counts space macOS reports late. Evicted images no longer linger as `Ready` in `imagecache` output. On 4.0 you should see far fewer surprise cold pulls, but re-cache the same way if you do.
 

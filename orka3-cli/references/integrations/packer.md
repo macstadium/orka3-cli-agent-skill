@@ -92,7 +92,7 @@ Then set `image_name` to the full OCI path:
 image_name = "ghcr.io/your-org/orka-images/custom-sonoma:v1.2"
 ```
 
-The plugin runs `sync` in the guest before creating the image, then waits for the push to finish (up to 1 hour in v3.1.2). If the build times out, check the push with `orka vm get-push-status <VM> -n <BUILDER_NS>`.
+The plugin runs `sync` in the guest before creating the image, then waits for the push to finish (up to 1 hour in v3.1.2). If the build times out, check the push with `orka vm get-push-status -n <BUILDER_NS>` (without a job name it lists every push in the namespace; the argument is the push job name, such as `vm-push-xxxxx`, which Packer doesn't show).
 
 ## Dev toolkit examples
 
