@@ -20,7 +20,7 @@ on:
         required: false
 
 env:
-  CLI_VERSION: "3.7.0-alpha"
+  CLI_VERSION: "4.0.0"
 
 permissions:
   contents: read
