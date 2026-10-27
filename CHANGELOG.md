@@ -31,7 +31,11 @@ Folds in verified findings from Robert Elwell's Orka agent playbooks, which were
 - TeamCity: plugin 2.0.1 installs from the JetBrains Marketplace (no `./gradlew build`), authenticates only with a service account token (no email/password), and the profile has Namespace and Node mappings fields; added the first-ARM-deploy timeout known issue
 - Namespace resolution: `orka3 user login` and `orka3 user set-token` reset the `orka` context namespace to `orka-default`, so `ORKA_DEFAULT_NAMESPACE` is the lasting default; the precedence order applies only to `vm`, `node`, `imagecache`, `registrycredential`, `rolebinding`, `serviceaccount`; `orka3 upgrade service` always defaults to `orka-default`
 - `monitoring.md`: added the Orka server metrics target at `/api/v1/metrics` (GET check, HEAD returns 404)
-- VM Tools version guidance: match the cluster's release line, not its exact version (a 3.6.4 cluster runs VM Tools 3.6.0)
+- VM Tools version guidance: any VM Tools 3.6.0 or later work on both 3.6 and 4.0 clusters (the 4.0.0 Homebrew release includes the OK-6360 fix for 3.6 hosts); 4.0 VM Tools are needed only for User Data
+- VM metadata: Orka reserves six exact keys (`orka_vm_id`, `orka_vm_name`, `orka_base_image`, `orka_cpu`, `orka_memory`, `orka_node_name`), not the `orka_` prefix
+- Image cache: a cache job requests 0.5 CPU from the scheduler, separate from what it uses; disk I/O is what slows running VMs. Eviction removes the least recently used images, not the oldest
+- `monitoring.md`: node exporter is installed by MacStadium's provisioning, so it's only present on MacStadium-hosted clusters
+- `upgrade-workflows.md`: removed the claim that service account tokens must be regenerated after an upgrade; no release note requires it
 - Android emulator commands: `--platform` and `--image-type` are required with no defaults, the device flag is `--device-profile`, `emulator list` has no `--vm` filter, and connection details are `RELAY-IP`/`RELAY-PORT` (`relayIp`/`relayPort`), not `adbRelayIP`/`adbRelayPort`
 - `-o json` examples: `.[]` and `.[0].name`, not `.items[]` or `.name`
 - `orka3 vmc create` examples no longer pass `--namespace` (the flag doesn't exist)

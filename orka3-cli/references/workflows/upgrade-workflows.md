@@ -11,8 +11,8 @@ Self-service as of Orka 3.6+ via the Upgrade Service (v2), started and monitored
 2. Confirm Upgrade Service and node agents are healthy: `orka3 upgrade versions`, `orka3 upgrade service status`, `orka3 upgrade service agents`
 3. Start the run: `orka3 upgrade run --version <VERSION>` (admin access required)
 4. Monitor: `orka3 upgrade status <run-name>`
-5. After upgrade: download the new CLI version and regenerate service account tokens if this was a full version upgrade (or if the release notes require it)
-6. Update Orka VM Tools in custom golden images (`brew upgrade orka-vm-tools`) and republish them. Match the cluster's release line (3.x cluster, 3.x VM Tools). VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release, so a 3.6.4 cluster runs VM Tools 3.6.0. A VM Tools mismatch breaks disk resize and shared storage on Apple silicon.
+5. After upgrade: download the new CLI version
+6. Check Orka VM Tools in custom golden images. Any VM Tools 3.6.0 or later work on both 3.6 and 4.0 clusters; VM Tools 4.0 is required only for 4.0's User Data feature. To update, run `brew upgrade orka-vm-tools` in the image and republish it. VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release.
 
 ### What persists across a full version upgrade
 - Orka users
@@ -27,10 +27,8 @@ Self-service as of Orka 3.6+ via the Upgrade Service (v2), started and monitored
 - Registry credentials (Virtualization/Orchestration layer upgrades only)
 - Custom Kubernetes Pods and services (Virtualization/Orchestration layer upgrades only)
 
-**Critical:** Service account tokens must be regenerated after a full version upgrade. Any automated workflows using SA tokens will fail until regenerated.
-
 ### Patch version upgrades (x.y.Z)
-Zero-downtime. No maintenance window required. Running VMs, SA tokens, and image cache all preserved.
+Zero-downtime. No maintenance window required. Running VMs and image cache are preserved.
 
 **Note:** Adding Mac compute nodes requires the latest patch version. Node additions will fail on older patch versions.
 

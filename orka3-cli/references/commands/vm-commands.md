@@ -37,7 +37,7 @@ orka3 vm deploy [<NAME>] --config <TEMPLATE> [flags]
 - `--tag-required` - Require tagged nodes
 - `--generate-name` - Generate unique name with suffix
 - `--scheduler string` - Scheduler: 'default' or 'most-allocated'
-- `--metadata stringToString` - Custom metadata (key1=value1,key2=value2). Keys and values can't contain `,` or `=`; the `orka_` prefix is reserved. See [VM metadata](#vm-metadata)
+- `--metadata stringToString` - Custom metadata (key1=value1,key2=value2). Keys and values can't contain `,` or `=`; six keys are reserved: `orka_vm_id`, `orka_vm_name`, `orka_base_image`, `orka_cpu`, `orka_memory`, `orka_node_name` (other `orka_*` keys are accepted). See [VM metadata](#vm-metadata)
 - `-p, --ports strings` - Port mapping (NODE_PORT:VM_PORT[/tcp|/udp]); protocol defaults to TCP if omitted. Maps the node port to the VM port but does not open the port inside macOS
 - `--display-width int` - Virtual display width, 320-3840 (3.4+)
 - `--display-height int` - Virtual display height, 480-2160 (3.4+)
@@ -263,7 +263,7 @@ orka3 vm resize <VM_NAME> <NEW_SIZE_GB> [--user <SSH_USER>] [--password <SSH_PAS
 - `-n, --namespace string` - Target namespace
 
 **Architecture Behavior:**
-- **Apple Silicon**: Requires Orka VM Tools installed in the guest, on the same release line as the cluster (3.x VM Tools on a 3.x cluster). With VM Tools present, Orka resizes and repartitions automatically
+- **Apple Silicon**: Requires Orka VM Tools 3.6.0 or later installed in the guest (3.6 and 4.0 VM Tools both work on 3.6 and 4.0 clusters). With VM Tools present, Orka resizes and repartitions automatically
 - **Intel**: Provide SSH credentials for automatic repartition, or manually complete
 
 **Notes:**
