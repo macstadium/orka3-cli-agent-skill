@@ -25,7 +25,7 @@ orka3 node list mini-arm -o wide
 ```
 
 **Notes:**
-- JSON keys: `name`, `ip`, `status` (`READY`/`NOT READY`), `architecture`, `tags`, `allocatableCpu`, `availableCpu`, `allocatableMemory`, `availableMemory`, `runtime`, `version`. Capacity used = allocatable - available
+- JSON keys: `name`, `ip`, `status` (`READY`/`NOT READY`), `architecture`, `tags`, `allocatableCpu`, `availableCpu`, `allocatableMemory`, `availableMemory`, `allocatableGpu`, `availableGpu`, `os`, `runtime`, `version`, and `upgradeAgent` (3.6+, the Upgrade Service agent version). Capacity used = allocatable - available
 - A node cordoned in Kubernetes (`SchedulingDisabled`) still shows `READY` with free capacity here, and deploys to it fail with generic errors (see `references/troubleshooting/deployment-issues.md`). Admins with kubectl access can see it in `kubectl get nodes`
 
 ```bash

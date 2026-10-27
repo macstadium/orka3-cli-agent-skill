@@ -12,7 +12,7 @@ Self-service as of Orka 3.6+ via the Upgrade Service (v2), started and monitored
 3. Start the run: `orka3 upgrade run --version <VERSION>` (admin access required)
 4. Monitor: `orka3 upgrade status <RUN_NAME>`
 5. After upgrade: download the new CLI version
-6. Check Orka VM Tools in custom golden images. Any VM Tools 3.6.0 or later work on both 3.6 and 4.0 clusters; VM Tools 4.0 is required only for 4.0's User Data feature. To update, run `brew upgrade orka-vm-tools` in the image and republish it. VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release.
+6. Check Orka VM Tools in custom golden images. Any VM Tools 3.6.0 or later work on both 3.6 and 4.0 clusters; VM Tools 4.0 is required only for 4.0's User Data feature. To update, run `brew upgrade orka-vm-tools` in the image and republish it; the Homebrew cask always installs the latest release (4.0.0 today). To pin a version, install `https://orka-tools.s3.amazonaws.com/orka-vm-tools/official/<VERSION>/orka-vm-tools.pkg` instead. VM Tools is versioned separately from the cluster: on the 3.6 line it stays at 3.6.0 for every patch release.
 
 ### Checking component versions
 

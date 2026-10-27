@@ -121,12 +121,12 @@ orka3 ic add sonoma:latest --tags jenkins-builds
 - Image must be pulled first (or be an OCI image)
 - `--nodes`, `--tags`, and `--all` are mutually exclusive
 - An OCI reference without a tag means `:latest`
-- Before 3.5.1, `imagecache add` into a custom namespace silently did nothing
+- Before 3.5.2, `imagecache add` into a custom namespace didn't work: before 3.5.1 it silently did nothing, and on 3.5.1 an image that was already cached on the node never reached `Ready`
 - Each cache job requests 0.5 CPU, which takes it out of the node's schedulable capacity while the job runs, separate from what it actually uses. Its heavy disk I/O is what slows running VMs. Caching several images at once is faster than one after another
 
 **Cache behavior:**
 - First deploy of an uncached image on a node takes about 4 minutes; a cached deploy takes about 5 seconds
-- When node disk is short, deploying an uncached image evicts the least recently used cached images
+- When the image being pulled needs more space than is free on the node's data volume, the deploy evicts cached images, least recently accessed first, until enough space is free. There is no percentage threshold
 
 ### orka3 imagecache remove (alias: ic), v3.6.3+
 

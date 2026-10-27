@@ -119,7 +119,7 @@ orka3 sa token sa-jenkins --no-expiration
 
 **Notes:**
 - The returned token's lifetime may be shorter or longer than `--duration`
-- `--duration` and `--no-expiration` are mutually exclusive. Use `--no-expiration` on EKS, where the control plane caps token lifetime
+- `--duration` and `--no-expiration` are documented as mutually exclusive, but the CLI doesn't enforce it: if both are passed, `--no-expiration` wins without an error. Use `--no-expiration` on EKS, where the control plane caps token lifetime
 - A service account automatically has access to the namespace it was created in, and can't be moved to another namespace
 - Individual tokens can't be revoked; only `sa delete` revokes, and it revokes all of that account's tokens. Use one service account per consumer, and rotate by minting a new token on the same account
 - `sa list` doesn't show token expiry

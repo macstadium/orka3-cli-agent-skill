@@ -16,7 +16,7 @@ Apple silicon nodes run at most 2 VMs each (Apple EULA). Capacity in VM slots is
 
 Orka 3.6 is the last release with Intel support (Intel supported through March 2028; plan migration by December 2027).
 
-All `-o json` output from the CLI is a bare JSON array with camelCase keys (`.[0].name`, `.[]`), never `{items: [...]}`; the REST API wraps lists in `items` (see `references/commands/rest-api.md`).
+All `-o json` output from the CLI is a bare JSON array with camelCase keys (`.[0].name`, `.[]`), never `{items: [...]}`, even for a single object such as `vm deploy`. The exception is `orka3 upgrade` (3.6+): `upgrade versions`, `upgrade status`, `upgrade run`, and `upgrade service status` print a single JSON object; the REST API wraps lists in `items` (see `references/commands/rest-api.md`).
 
 User tokens expire in 1 hour. All automation and CI/CD must use service accounts (`orka3 sa create`, `orka3 sa token`), which support long-lived or non-expiring tokens.
 
@@ -24,7 +24,7 @@ Four execution contexts: local machine (full CLI), CI/CD (ephemeral containers â
 
 Image save, commit, push, and caching are async. Always pair with the status-check command: `orka3 image list <IMAGE>`, `orka3 imagecache info <IMAGE>`, or `orka3 vm get-push-status <JOB>`.
 
-Namespace resolution (v3.5.2+, for `vm`, `node`, `imagecache`, `registrycredential`, `rolebinding`, `serviceaccount`): `--namespace` flag > `ORKA_DEFAULT_NAMESPACE` env var > `orka` kubeconfig context > `orka-default`. `orka3 user login` and `orka3 user set-token` reset the context namespace to `orka-default`, so use `ORKA_DEFAULT_NAMESPACE` for a lasting default. Some features (shared disk, namespace auto-detection, macOS Tahoe) require v3.5.2+.
+Namespace resolution (v3.5.2+, for `vm`, `node`, `imagecache`, `registrycredential`, `rolebinding`, `serviceaccount`, and `emulator` on 3.7.0-alpha): `--namespace` flag > `ORKA_DEFAULT_NAMESPACE` env var > `orka` kubeconfig context > `orka-default`. `orka3 user login` and `orka3 user set-token` reset the context namespace to `orka-default`, so use `ORKA_DEFAULT_NAMESPACE` for a lasting default. Some features (shared disk, namespace auto-detection, macOS Tahoe) require v3.5.2+.
 
 Kubernetes upgrade resilience (v3.6+): Most orka3 commands continue working during k8s control-plane upgrades. Only `login` and `vm push` require the API server; expect failures for those two until the upgrade completes.
 
