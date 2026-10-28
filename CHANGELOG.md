@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2.0.0 (Orka 4.0)
+
+Draft, held until Orka 4.0 ships (GA around 2026-10-28). Verified against `releases/cluster/4.0` at `57f99689`, the published 4.0.0 CLI build, and macstadium-docs #383, #390, #394, #402, #406, #417, and #436. Major version because the CLI command changes.
+
+### Changed
+
+- **CLI renamed to `orka`.** Command examples, headings, and anchors use `orka`. `SKILL.md` has a new "Which CLI" section: `orka` is the 4.x CLI, `orka3` stays the 3.6 CLI, both install side by side and share the config file and the `orka` kubeconfig context, no alias ships, running the 4.0 CLI as `orka3` warns on stderr only, the optional `orka3` symlink bridge and its caveats, install with `brew install --cask orka` (the `orka` cask now serves 4.0.0 and installs alongside the `orka3` cask). Intel-only and removed commands, the Intel to Apple silicon migration, and other 3.6-only steps stay `orka3`. The skill name and directory are unchanged.
+- Android emulators are GA in Orka 4.0, no longer early access.
+- Emulator commands resolve the namespace like `vm` (`--namespace`, `ORKA_DEFAULT_NAMESPACE`, the `orka` context, then `orka-default`); emulator configurations always live in `orka-default`.
+- Workflow and troubleshooting examples use `orka rbac ... --role dev`. `rolebinding` is deprecated and hidden from `--help` in 4.0; 3.6 users get an `orka3 rb` note.
+- NFS-hosted images, `image`, `remote-image`, `vm save`, and `vm commit` marked deprecated in 4.0, with the exact stderr warning.
+- Pod quota text from 1.4.0 split by version: 3.6 fixed at `4`, 3.7.0-alpha tunable shared quota, 4.0 per-node limits.
+- The 3.6.3+ same-name re-cache known issue is marked fixed in Orka 4.0.
+
+### Added
+
+- `emulator-commands.md`: `emulator-config create`/`list`/`delete` (aliases `emc`, `emuconfig`), `--config` and `--grpc` on deploy, `--grpc=false` and `--device-profile ""` overrides, gRPC endpoint section, list columns including `-o wide`, CLI JSON keys (`relayIp`, `relayPort`, `grpcPort`), `PairedVMStopped` and `EmulatorUnschedulable`, sizing and density (about 5 to 6 GB of host memory per emulator, memory is the usual limit, CPU and memory come from the device profile, animation `adb` commands), REST paths, and the Play Store ADB limitation as a 4.0 known issue.
+- `vm-commands.md`: `--userdata` and `USERDATA-PHASE`, with run-once semantics, the meaning of `skipped`, and script visibility through Kubernetes read access. Removed `vm resize --user`/`--password`. `vm` and `image` reject unknown subcommands with a non-zero exit.
+- `admin-commands.md`: `rbac add-subject`/`list-subjects`/`remove-subject` with `--role admin|dev`, and the per-subcommand `rolebinding` deprecation messages.
+- `rest-api.md`: "Orka 4.0 API Changes" (removed routes return `404`, `cluster-info` drops `gpuPassthroughEnabled`, Intel-only fields return `400`, `netBoost` accepted and ignored, webhook rejection messages, 3.6 objects can still be updated and deleted, deprecation headers), emulator configuration endpoints, `config` and `grpc` on deploy, `grpcRelayPort`, `userdata`, and the `/api/v1/rbac` routes.
+- `upgrade-workflows.md`: "Upgrading to Orka 4.0" (requires 3.6, Intel worker nodes block the upgrade at the pre-check with no changes made, schedule with support), Orka-managed PDBs and other control plane changes, and the 4.0 per-node limits (`osx_node_orka_quota_job` default `2`, node pod quota `110`, emulators uncapped).
+- `deployment-issues.md`: `Not enough disk space on node <NODE> to deploy the VM`, and Intel image or setting rejections on 4.0.
+- `image-commands.md`, `image-issues.md`: `imagecache remove --all`/`--tags` skip uncached nodes (per-node `202`) on 4.0, cache record cleanup, and the 4.0 eviction fixes.
+- `jenkins.md`: "Orka 4.0" (plugin 2.10 works; `netBoost: false` is accepted and net boost stays on; Legacy IO and GPU Passthrough are rejected when turned on). Moved here from the 3.x release.
+- `node-commands.md`: `upgradeAgent` is a 3.6-only `node list -o json` key; 4.0 doesn't return it.
+- `monitoring.md`: 4.0 operator metrics (`vm_namespace` label, pending-VM queue metrics, exponential buckets, `orka-webhooks` metrics endpoint).
+
+### Removed
+
+- Documented the Orka 4.0 removals rather than deleting them, since Orka 3.6 remains the last Intel release and is supported through March 2028: `orka3 vm start|stop|suspend|resume|revert`, `orka3 image generate`, the `orka3 iso` and `orka3 remote-iso` commands, the `--iso`, `--gpu`, `--system-serial`, `--disable-net-boost`, and `--legacy-io` flags on `vm deploy` and `vm-config create`, and `--user`/`--password` on `vm resize`.
+
+### Fixed
+
+- `admin-commands.md`, `auth-issues.md`, `SKILL.md`: said `orka rbac add-subject --role admin` doesn't work on MacStadium-hosted clusters. It does on 4.0, including for custom-domain certificate uploads (tested by engineering on a lab cluster). The managed `orka-admin` service account from support is now described as the 3.6 hosted path only.
+- `emulator-commands.md` said gRPC on an emulator configuration was CLI-only. The REST API accepts `grpc` on configuration create and returns it in configuration responses.
+- `emulator-commands.md` said `--device-profile` needed Orka 4.0. It was already in 3.7.0-alpha; 4.0 adds `--config` and `--grpc`.
+- `emulator-commands.md` documented `--device`, `--cpu`, and `--memory` on `emulator deploy`, and a `--vm` filter on `emulator list`. The CLI has never accepted any of them. Removed, with a note so they don't get reintroduced.
+- Em dashes replaced throughout the skill.
+- `SKILL.md` said `--role admin` isn't usable on MacStadium-hosted clusters, contradicting `admin-commands.md`. It is on 4.0.
+- `admin-commands.md` suggested removing the admin role from an exposed service account token. Tokens can't be revoked one at a time, and `remove-subject --role admin` also strips the account's `orka-dev` access; delete the service account instead.
+- `vm-commands.md`, `SKILL.md`: dropped the 3.7.0-alpha VM Tools User Data exception. No 3.7.0-alpha VM Tools were published.
+- `upgrade-workflows.md`: the Intel pre-check message is `Orka 4.0 does not support Intel worker nodes. Remove these nodes from the cluster first:`. Upgrading to 4.0 is support-led; the Upgrade Service can't perform it yet.
+- `admin-commands.md`, `SKILL.md`: each `rolebinding` subcommand prints its own deprecation message; the `"rolebinding"` one appears only for a bare `orka rolebinding`.
+- `SKILL.md`: dropped the leftover host node macOS upgrade line.
+
 ## [Unreleased] - 1.6.0
 
 Ports Orka 3.x documentation changes from docs.macstadium.com (September to October 2026). Version tables, compatibility data, and known-issue lists are summarized with a link to the docs page instead of copied in full.

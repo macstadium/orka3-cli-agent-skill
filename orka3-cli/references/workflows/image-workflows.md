@@ -18,10 +18,10 @@ This guide covers custom image preparation, caching, and OCI registry integratio
 
 ```bash
 # 1. Deploy base VM
-orka3 vm deploy base-config --image ghcr.io/macstadium/orka-images/sonoma:latest
+orka vm deploy base-config --image ghcr.io/macstadium/orka-images/sonoma:latest
 
 # 2. Get connection info
-orka3 vm list base-config --output wide
+orka vm list base-config --output wide
 
 # 3. Connect via Screen Sharing
 # vnc://<VM_IP>:<Screenshare_port>
@@ -47,28 +47,28 @@ ssh -p <SSH_PORT> admin@<VM_IP> sync
 
 # 6. Save as new image (preserves original)
 #    save and commit need NFS image storage; on Harbor/OCI-only clusters use vm push
-orka3 vm save base-config my-configured-sonoma
+orka vm save base-config my-configured-sonoma
 
 # OR commit to original image (modifies original)
-orka3 vm commit base-config --description 'Configured with build tools'
+orka vm commit base-config --description 'Configured with build tools'
 
 # 7. Wait for async operation to complete
-orka3 image list my-configured-sonoma --output wide
+orka image list my-configured-sonoma --output wide
 
 # 8. Clean up base VM
-orka3 vm delete base-config
+orka vm delete base-config
 
 # 9. Boot-test the published image, not the builder VM
-orka3 vm deploy test-vm --image my-configured-sonoma
+orka vm deploy test-vm --image my-configured-sonoma
 
 # 10. Verify configuration persists
 # Connect via Screen Sharing and verify changes
 
 # 11. Clean up test VM
-orka3 vm delete test-vm
+orka vm delete test-vm
 
 # 12. Deploy production VMs with configured image
-orka3 vm deploy prod-vm-1 --image my-configured-sonoma --cpu 6 --memory 12
+orka vm deploy prod-vm-1 --image my-configured-sonoma --cpu 6 --memory 12
 ```
 
 ## Image Caching for Fast Deployments (Apple Silicon)
@@ -77,32 +77,32 @@ orka3 vm deploy prod-vm-1 --image my-configured-sonoma --cpu 6 --memory 12
 
 ```bash
 # 1. Check current node image cache
-orka3 ic list
+orka ic list
 
 # 2. Cache base images on all nodes
-orka3 ic add ghcr.io/macstadium/orka-images/sonoma:latest --all
+orka ic add ghcr.io/macstadium/orka-images/sonoma:latest --all
 
 # 3. Check caching progress
-orka3 ic info ghcr.io/macstadium/orka-images/sonoma:latest
+orka ic info ghcr.io/macstadium/orka-images/sonoma:latest
 
 # Wait until status shows 'Ready' on all nodes
 
 # 4. Cache additional images on specific nodes
-orka3 ic add my-configured-image --nodes mini-arm-1,mini-arm-2,mini-arm-3
+orka ic add my-configured-image --nodes mini-arm-1,mini-arm-2,mini-arm-3
 
 # 5. Cache by node tags
 # First, tag nodes
-orka3 node tag mini-arm-4 xcode-15
-orka3 node tag mini-arm-5 xcode-15
+orka node tag mini-arm-4 xcode-15
+orka node tag mini-arm-5 xcode-15
 
 # Then cache image on tagged nodes
-orka3 ic add xcode-15-image --tags xcode-15
+orka ic add xcode-15-image --tags xcode-15
 
 # 6. Verify all images are cached
-orka3 ic list --output wide
+orka ic list --output wide
 
 # 7. Deploy VMs (will use cached images - fast!)
-orka3 vm deploy --image ghcr.io/macstadium/orka-images/sonoma:latest
+orka vm deploy --image ghcr.io/macstadium/orka-images/sonoma:latest
 ```
 
 ## OCI Registry Integration Workflow
@@ -113,36 +113,36 @@ orka3 vm deploy --image ghcr.io/macstadium/orka-images/sonoma:latest
 # As admin:
 
 # 1. Add registry credentials
-orka3 regcred add https://ghcr.io \
+orka regcred add https://ghcr.io \
   --username "$REGISTRY_USER" \
   --password "$REGISTRY_TOKEN"
 
 # OR read password from stdin
-echo -n "$REGISTRY_TOKEN" | orka3 regcred add https://ghcr.io \
+echo -n "$REGISTRY_TOKEN" | orka regcred add https://ghcr.io \
   --username "$REGISTRY_USER" \
   --password-stdin
 
 # 2. Verify credentials
-orka3 regcred list
+orka regcred list
 
 # 3. Deploy VM from OCI image
-orka3 vm deploy --image ghcr.io/your-org/orka-images/custom-sonoma:v1.2
+orka vm deploy --image ghcr.io/your-org/orka-images/custom-sonoma:v1.2
 
 # 4. Customize VM (connect via Screen Sharing)
 # Install software, configure settings, etc.
 
 # 5. Flush guest disk writes, then push customized VM back to registry (Apple Silicon only)
 ssh -p <SSH_PORT> admin@<VM_IP> sync
-orka3 vm push <VM_NAME> ghcr.io/your-org/orka-images/custom-sonoma:v1.3
+orka vm push <VM_NAME> ghcr.io/your-org/orka-images/custom-sonoma:v1.3
 
 # 6. Check push status (pass the VM's namespace; finished pushes show Ready)
-orka3 vm get-push-status -n <VM_NAMESPACE>
+orka vm get-push-status -n <VM_NAMESPACE>
 
 # 7. Deploy new VMs from updated image
-orka3 vm deploy --image ghcr.io/your-org/orka-images/custom-sonoma:v1.3
+orka vm deploy --image ghcr.io/your-org/orka-images/custom-sonoma:v1.3
 
 # 8. (Optional) Cache OCI images on nodes
-orka3 ic add ghcr.io/your-org/orka-images/custom-sonoma:v1.3 --all
+orka ic add ghcr.io/your-org/orka-images/custom-sonoma:v1.3 --all
 ```
 
 ## VM save vs. VM commit
@@ -168,7 +168,7 @@ Full table: [Orka compatibility matrix](https://docs.macstadium.com/orka/orka-ov
 - **macOS 27 Golden Gate guests:** need Orka 3.6+ and a host on macOS 26.6.2 or later. macOS 15 hosts can't run macOS 27 guests. Deploy from `ghcr.io/macstadium/orka-images/golden-gate:latest`, or upgrade an existing VM to macOS 27 in place and save it as a new image.
 - **macOS 27 VMs need more than 2 GB of RAM to boot** (at 2 GB or less they fail to start). MacStadium recommends at least 4 GB, based on its own testing. `--memory` takes gigabytes:
   ```bash
-  orka3 vm deploy --image ghcr.io/macstadium/orka-images/golden-gate:latest --memory 4
+  orka vm deploy --image ghcr.io/macstadium/orka-images/golden-gate:latest --memory 4
   ```
 - **macOS 27 as a host OS isn't signed off yet.** MacStadium's evaluation found no blockers, but final validation isn't complete, so macOS 26.6.2 stays the recommended host (and the MSDC default). On MacStadium-hosted clusters, macOS 27 hosts can't grant TCC permissions programmatically, which affects NFS-hosted images and shared VM storage on newly provisioned hosts. Self-managing hosts and want macOS 27? Contact MacStadium support first.
 - **macOS 26 Tahoe guests:** Orka 3.5+, host macOS 15.6+.
@@ -180,7 +180,7 @@ Full table: [Orka compatibility matrix](https://docs.macstadium.com/orka/orka-ov
 - **Upgrade macOS before resizing the disk.** A macOS upgrade can fail on a resized VM. Upgrade first and resize last. If you've already resized, start from an unresized image.
 - **Provisioning UDID isn't stable across deploys on Sequoia.** If signing needs a stable Provisioning UDID, build from a Sonoma base image, upgrade the guest to Sequoia in place, then save the image. Apply the in-place upgrade workaround below before upgrading, or the 15.x guest ends up with its usable memory capped.
 - **In-place upgrades to macOS 15.x and 26.x inside a VM currently fail** (Software Update or `startosinstall`). 26.x guests never finish the first boot after the upgrade restart; 15.x guests boot but can use only about 1.75 GiB of memory. Upgrades to macOS 27 aren't affected. Affected VMs can't be repaired: recreate them and apply the workaround before upgrading. See `references/troubleshooting/image-issues.md` for the check and the workaround.
-- **Hardened or security-tooled images:** when you bump agent versions or add a tool, save under a new tag (for example `my-team-hardened-sequoia-v2`) instead of overwriting the image your team deploys from, so you can roll back. For many deploys from one image, pre-cache it: `orka3 imagecache add <IMAGE_NAME> --all`.
+- **Hardened or security-tooled images:** when you bump agent versions or add a tool, save under a new tag (for example `my-team-hardened-sequoia-v2`) instead of overwriting the image your team deploys from, so you can roll back. For many deploys from one image, pre-cache it: `orka imagecache add <IMAGE_NAME> --all`.
 
 ## Image Management Best Practices
 

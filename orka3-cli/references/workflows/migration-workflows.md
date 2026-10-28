@@ -4,7 +4,7 @@ This guide covers Intel to Apple Silicon migration, NFS-to-OCI (Harbor) image mi
 
 ## Contents
 - [Migration from Intel to Apple Silicon](#migration-from-intel-to-apple-silicon)
-- [Intel vs. Apple Silicon Feature Comparison](#intel-vs-apple-silicon-feature-comparison)
+- [Intel vs. Apple Silicon Feature Comparison (Orka 3.6 and earlier)](#intel-vs-apple-silicon-feature-comparison-orka-36-and-earlier)
 - [Migrating NFS Images to OCI with Harbor](#migrating-nfs-images-to-oci-with-harbor)
 - [Disaster Recovery and Backup Strategy](#disaster-recovery-and-backup-strategy)
 - [Image Backup to OCI Registry (Apple Silicon)](#image-backup-to-oci-registry-apple-silicon)
@@ -13,7 +13,7 @@ This guide covers Intel to Apple Silicon migration, NFS-to-OCI (Harbor) image mi
 
 ## Migration from Intel to Apple Silicon
 
-Orka 3.6 is the last release with Intel support. Intel is supported through March 2028; plan to finish migrating by December 2027.
+Orka 3.6 is the last release with Intel support. Intel is supported through March 2028; plan to finish migrating by December 2027. A cluster with Intel worker nodes can't upgrade to Orka 4.0, so do this migration on 3.6, with the 3.6 `orka3` CLI.
 
 **Plan and execute architecture migration:**
 
@@ -51,7 +51,7 @@ orka3 vmc create arm-version \
 # 6. Decommission Intel VMs after validation
 ```
 
-## Intel vs. Apple Silicon Feature Comparison
+## Intel vs. Apple Silicon Feature Comparison (Orka 3.6 and earlier)
 
 | Feature | Intel (amd64) | Apple Silicon (arm64) |
 |---------|---------------|----------------------|
@@ -65,34 +65,34 @@ orka3 vmc create arm-version \
 
 ## Migrating NFS Images to OCI with Harbor
 
-Requires Orka 3.5+ (check with `orka3 version`) and a MacStadium-provisioned Harbor instance (request it from support@macstadium.com). Harbor credentials are in your firewall's Credentials section in My Cloud; the Harbor URL is usually the last IP in your Orka subnet (for example `https://10.221.189.254`) with a default project of `library`. Full guide: [Migrate NFS Orka images to OCI format with Harbor](https://docs.macstadium.com/orka/oci-images/orka-self-service-migrating-nfs-images-to-oci-with-harbor).
+Requires Orka 3.5+ (check with `orka version`) and a MacStadium-provisioned Harbor instance (request it from support@macstadium.com). Harbor credentials are in your firewall's Credentials section in My Cloud; the Harbor URL is usually the last IP in your Orka subnet (for example `https://10.221.189.254`) with a default project of `library`. Full guide: [Migrate NFS Orka images to OCI format with Harbor](https://docs.macstadium.com/orka/oci-images/orka-self-service-migrating-nfs-images-to-oci-with-harbor).
 
 ```bash
 # 1. Add Harbor credentials (namespace-specific: repeat with --namespace for each namespace you deploy in)
-echo "$HARBOR_PASSWORD" | orka3 regcred add <HARBOR_FQDN> --username <HARBOR_USER> --password-stdin
-orka3 regcred list
+echo "$HARBOR_PASSWORD" | orka regcred add <HARBOR_FQDN> --username <HARBOR_USER> --password-stdin
+orka regcred list
 
 # 2. Pick the NFS images to convert
-orka3 image list
+orka image list
 
 # 3. Deploy a temporary VM from the NFS image (--memory is a number of GB)
-orka3 vm deploy migration-temp-vm --image <NFS_IMAGE_NAME> --cpu 4 --memory 8
-orka3 vm list migration-temp-vm            # Wait until it's running
+orka vm deploy migration-temp-vm --image <NFS_IMAGE_NAME> --cpu 4 --memory 8
+orka vm list migration-temp-vm            # Wait until it's running
 
 # 4. Push it to Harbor as an OCI image, then check the push job
-orka3 vm push migration-temp-vm <HARBOR_FQDN>/library/<NEW_IMAGE_NAME>:<TAG>
-orka3 vm get-push-status <JOB_NAME>
+orka vm push migration-temp-vm <HARBOR_FQDN>/library/<NEW_IMAGE_NAME>:<TAG>
+orka vm get-push-status <JOB_NAME>
 
 # 5. Cache the OCI image on nodes and watch progress
-orka3 imagecache add <HARBOR_FQDN>/library/<NEW_IMAGE_NAME>:<TAG> --all
-orka3 imagecache info <HARBOR_FQDN>/library/<NEW_IMAGE_NAME>:<TAG>
+orka imagecache add <HARBOR_FQDN>/library/<NEW_IMAGE_NAME>:<TAG> --all
+orka imagecache info <HARBOR_FQDN>/library/<NEW_IMAGE_NAME>:<TAG>
 
 # 6. Clean up, then repeat for each image
-orka3 vm delete migration-temp-vm
+orka vm delete migration-temp-vm
 ```
 
 **Point CI/CD at the OCI image:**
-- **GitHub Actions and GitLab** deploy from a VM config. Create one for the OCI image (`orka3 vm-config create <VM_CONFIGURATION_NAME> --image <HARBOR_FQDN>/library/<NEW_IMAGE_NAME>:<TAG>`), then set `ORKA_VM_CONFIG` (GitHub runner, restart the container) or `ORKA_CONFIG_NAME` (GitLab CI/CD variable or `.gitlab-ci.yml`) to it.
+- **GitHub Actions and GitLab** deploy from a VM config. Create one for the OCI image (`orka vm-config create <VM_CONFIGURATION_NAME> --image <HARBOR_FQDN>/library/<NEW_IMAGE_NAME>:<TAG>`), then set `ORKA_VM_CONFIG` (GitHub runner, restart the container) or `ORKA_CONFIG_NAME` (GitLab CI/CD variable or `.gitlab-ci.yml`) to it.
 - **Jenkins** takes the image from each Orka Template (Manage Jenkins > Nodes and Clouds > Configure Clouds) and each permanent agent's node configuration, not from the Jenkinsfile. Set **Image** to the OCI reference.
 - **Packer:** set `source_image` (and `image_name`) to full OCI references, and push Packer-built images to Harbor.
 
@@ -104,47 +104,47 @@ orka3 vm delete migration-temp-vm
 
 ```bash
 # 1. List all images and VM configs
-orka3 image list -o json > images-backup-$(date +%Y%m%d).json
-orka3 vmc list -o json > vm-configs-backup-$(date +%Y%m%d).json
+orka image list -o json > images-backup-$(date +%Y%m%d).json
+orka vmc list -o json > vm-configs-backup-$(date +%Y%m%d).json
 
 # 2. For Apple Silicon: Push important images to OCI registry
-orka3 regcred add https://ghcr.io --username "$REGISTRY_USER" --password "$REGISTRY_TOKEN"
+orka regcred add https://ghcr.io --username "$REGISTRY_USER" --password "$REGISTRY_TOKEN"
 
 # Deploy VM from image, then push to registry
-orka3 vm deploy backup-vm --image important-image
-orka3 vm push backup-vm ghcr.io/company/backups/important-image:$(date +%Y%m%d)
-orka3 vm delete backup-vm
+orka vm deploy backup-vm --image important-image
+orka vm push backup-vm ghcr.io/company/backups/important-image:$(date +%Y%m%d)
+orka vm delete backup-vm
 
 # 3. For Intel: Copy images to another Orka cluster
 # (Use remote-image commands or manual file transfer)
 
 # 4. Document namespace configurations
-orka3 namespace list -o json > namespaces-backup-$(date +%Y%m%d).json
-orka3 rb list-subjects --namespace orka-default -o json > rbac-default-$(date +%Y%m%d).json
-orka3 rb list-subjects --namespace orka-prod -o json > rbac-prod-$(date +%Y%m%d).json
+orka namespace list -o json > namespaces-backup-$(date +%Y%m%d).json
+orka rbac list-subjects --role dev --namespace orka-default -o json > rbac-default-$(date +%Y%m%d).json
+orka rbac list-subjects --role dev --namespace orka-prod -o json > rbac-prod-$(date +%Y%m%d).json
 
 # 5. Document node assignments
-orka3 node list --output wide > nodes-layout-$(date +%Y%m%d).txt
+orka node list --output wide > nodes-layout-$(date +%Y%m%d).txt
 ```
 
 ## Image Backup to OCI Registry (Apple Silicon)
 
 ```bash
 # 1. Ensure registry credentials are configured
-orka3 regcred list
+orka regcred list
 
 # 2. For each important image:
 #    a. Deploy a VM from the image
-orka3 vm deploy backup-vm --image <IMAGE_NAME>
+orka vm deploy backup-vm --image <IMAGE_NAME>
 
 #    b. Push to registry with date tag
-orka3 vm push backup-vm ghcr.io/company/backups/<IMAGE_NAME>:$(date +%Y%m%d)
+orka vm push backup-vm ghcr.io/company/backups/<IMAGE_NAME>:$(date +%Y%m%d)
 
 #    c. Wait for push to complete (status Ready; push jobs live in the VM's namespace)
-orka3 vm get-push-status -n <VM_NAMESPACE>
+orka vm get-push-status -n <VM_NAMESPACE>
 
 #    d. Clean up backup VM
-orka3 vm delete backup-vm
+orka vm delete backup-vm
 
 # 3. Verify backup in registry
 # Use external registry tools or GitHub UI to confirm
@@ -156,16 +156,16 @@ orka3 vm delete backup-vm
 
 ```bash
 # 1. Add registry credentials (if not already configured)
-echo "$REGISTRY_TOKEN" | orka3 regcred add https://ghcr.io --username <USER> --password-stdin
+echo "$REGISTRY_TOKEN" | orka regcred add https://ghcr.io --username <USER> --password-stdin
 
 # 2. Deploy VM from backed-up image
-orka3 vm deploy restored-vm --image ghcr.io/company/backups/<IMAGE_NAME>:<DATE>
+orka vm deploy restored-vm --image ghcr.io/company/backups/<IMAGE_NAME>:<DATE>
 
 # 3. Save as local image (optional; requires NFS image storage on the cluster)
-orka3 vm save restored-vm <LOCAL_IMAGE_NAME>
+orka vm save restored-vm <LOCAL_IMAGE_NAME>
 
 # 4. Clean up
-orka3 vm delete restored-vm
+orka vm delete restored-vm
 ```
 
 ### Recreate Namespace Configuration
@@ -174,15 +174,15 @@ orka3 vm delete restored-vm
 # Using saved backup files:
 
 # 1. Create namespace
-orka3 namespace create <NAMESPACE_NAME>
+orka namespace create <NAMESPACE_NAME>
 
 # 2. Move nodes (from saved node layout)
-orka3 node namespace <NODE> <NAMESPACE_NAME>
+orka node namespace <NODE> <NAMESPACE_NAME>
 
 # 3. Restore access (from saved RBAC backup)
 # Review rbac-*.json files and recreate rolebindings
-orka3 rb add-subject --namespace <NS> --user <EMAIL>
-orka3 rb add-subject --namespace <NS> --serviceaccount <SA_NS>:<SA_NAME>
+orka rbac add-subject --role dev --namespace <NS> --user <EMAIL>
+orka rbac add-subject --role dev --namespace <NS> --serviceaccount <SA_NS>:<SA_NAME>
 ```
 
 ## Migration Checklist
