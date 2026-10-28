@@ -1,6 +1,6 @@
 # Network and Connectivity Troubleshooting
 
-This guide covers common network and connectivity issues with Orka3 VMs.
+This guide covers common network and connectivity issues with Orka VMs.
 
 ## Contents
 - [Problem: Cannot connect to VM via Screen Sharing](#problem-cannot-connect-to-vm-via-screen-sharing)
@@ -8,6 +8,7 @@ This guide covers common network and connectivity issues with Orka3 VMs.
 - [Problem: Port conflicts](#problem-port-conflicts)
 - [Problem: VM is slow/unresponsive during use](#problem-vm-is-slowunresponsive-during-use)
 - [Problem: VM deployments are very slow](#problem-vm-deployments-are-very-slow)
+- [Known Guest Issues (Apple Silicon)](#known-guest-issues-apple-silicon)
 - [Default Credentials](#default-credentials)
 - [Common Ports](#common-ports)
 - [Getting Help](#getting-help)
@@ -22,7 +23,7 @@ This guide covers common network and connectivity issues with Orka3 VMs.
 **Diagnosis:**
 ```bash
 # 1. Get VM connection info
-orka3 vm list <VM_NAME> --output wide
+orka vm list <VM_NAME> --output wide
 
 # Note the IP and Screenshare port
 
@@ -50,11 +51,13 @@ sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resourc
   -restart -agent -privs -all
 
 # 4. Use MacStadium base images which have Screen Sharing pre-enabled
-orka3 vm deploy --image ghcr.io/macstadium/orka-images/sonoma:latest
+orka vm deploy --image ghcr.io/macstadium/orka-images/sonoma:latest
 
 # 5. Wait longer - VM may still be booting
 # First boot can take 5-10 minutes
 ```
+
+If SSH works but Screen Sharing doesn't on an Apple silicon VM, see [Known Guest Issues](#known-guest-issues-apple-silicon).
 
 ## Problem: Cannot connect via SSH
 
@@ -66,7 +69,7 @@ orka3 vm deploy --image ghcr.io/macstadium/orka-images/sonoma:latest
 **Diagnosis:**
 ```bash
 # 1. Get VM connection info
-orka3 vm list <VM_NAME> --output wide
+orka vm list <VM_NAME> --output wide
 
 # Note the IP and SSH port
 
@@ -86,7 +89,7 @@ ssh -p <SSH_PORT> admin@<VM_IP>
 sudo systemsetup -setremotelogin on
 
 # 4. Use MacStadium base images (SSH pre-enabled)
-orka3 vm deploy --image ghcr.io/macstadium/orka-images/sonoma:latest
+orka vm deploy --image ghcr.io/macstadium/orka-images/sonoma:latest
 
 # 5. Check firewall on VM
 # System Settings > Network > Firewall
@@ -101,16 +104,16 @@ orka3 vm deploy --image ghcr.io/macstadium/orka-images/sonoma:latest
 **Diagnosis:**
 ```bash
 # Check which ports are in use
-orka3 vm list --output wide              # Check Node column for port usage
+orka vm list --output wide              # Check Node column for port usage
 ```
 
 **Solutions:**
 ```bash
 # Let Orka assign ports automatically (recommended)
-orka3 vm deploy --image <IMAGE>  # No --ports flag
+orka vm deploy --image <IMAGE>  # No --ports flag
 
 # Or specify different available ports
-orka3 vm deploy --image <IMAGE> --ports 9100:4000,9101:5000
+orka vm deploy --image <IMAGE> --ports 9100:4000,9101:5000
 ```
 
 ## Problem: VM is slow/unresponsive during use
@@ -123,42 +126,42 @@ orka3 vm deploy --image <IMAGE> --ports 9100:4000,9101:5000
 **Diagnosis:**
 ```bash
 # 1. Check VM resource allocation
-orka3 vm list <VM_NAME> --output wide
+orka vm list <VM_NAME> --output wide
 
 # Look at CPU and memory allocated
 
 # 2. Check node load
-orka3 node list --output wide
+orka node list --output wide
 
 # Look at available resources on host node
 
-# 3. Check if too many VMs on one node
-orka3 vm list --output wide | awk '{print $NF}' | sort | uniq -c
+# 3. Check if too many VMs on one node (count VMs per node)
+orka vm list -o json | jq -r 'group_by(.node)[] | "\(.[0].node) \(length)"'
 ```
 
 **Solutions:**
 ```bash
 # Option 1: Increase VM resources
 # Create new config with more resources
-orka3 vmc create larger-vm --image <IMAGE> --cpu 6 --memory 16
+orka vmc create larger-vm --image <IMAGE> --cpu 6 --memory 16
 
 # Delete old VM and redeploy
-orka3 vm delete <VM_NAME>
-orka3 vm deploy <VM_NAME> --config larger-vm
+orka vm delete <VM_NAME>
+orka vm deploy <VM_NAME> --config larger-vm
 
 # Option 2: Reduce load on node
 # Delete unnecessary VMs
-orka3 vm delete <UNUSED_VM>
+orka vm delete <UNUSED_VM>
 
 # Option 3: Use node affinity to spread VMs
 # Tag less loaded nodes
-orka3 node tag <UNDERUTILIZED_NODE> low-load
+orka node tag <UNDERUTILIZED_NODE> low-load
 
 # Deploy new VMs to those nodes
-orka3 vm deploy --image <IMAGE> --tag low-load
+orka vm deploy --image <IMAGE> --tag low-load
 
 # Option 4: Use most-allocated scheduler for better packing
-orka3 vmc create packed-vm --image <IMAGE> --scheduler most-allocated
+orka vmc create packed-vm --image <IMAGE> --scheduler most-allocated
 ```
 
 ## Problem: VM deployments are very slow
@@ -171,36 +174,45 @@ orka3 vmc create packed-vm --image <IMAGE> --scheduler most-allocated
 **Diagnosis:**
 ```bash
 # 1. Check if images are cached (Apple Silicon)
-orka3 ic list
+orka ic list
 
 # 2. Check node load
-orka3 node list --output wide
+orka node list --output wide
 
 # 3. Verify image size
-orka3 image list <IMAGE> --output wide
+orka image list <IMAGE> --output wide
 ```
 
 **Solutions:**
 ```bash
 # For Apple Silicon: Pre-cache images
-orka3 ic add <IMAGE> --all
+orka ic add <IMAGE> --all
 
 # Wait for caching to complete
-orka3 ic info <IMAGE>
+orka ic info <IMAGE>
 
 # Then deploy (should be much faster)
-orka3 vm deploy --image <IMAGE>
+orka vm deploy --image <IMAGE>
 
 # Use smaller images if possible
 # Consider creating optimized base images
 
 # Deploy to less loaded nodes
-orka3 node list --output wide  # Find node with fewer VMs
-orka3 vm deploy --image <IMAGE> --node <LESS_LOADED_NODE>
+orka node list --output wide  # Find node with fewer VMs
+orka vm deploy --image <IMAGE> --node <LESS_LOADED_NODE>
 
 # Increase deployment timeout
-orka3 vm deploy --image <IMAGE> --timeout 20
+orka vm deploy --image <IMAGE> --timeout 20
 ```
+
+## Known Guest Issues (Apple Silicon)
+
+| Symptom | Cause / fix |
+|---------|-------------|
+| Screen Sharing fails but SSH works | A failed GPU module in the Apple Virtualization framework. Use SSH, or redeploy the VM |
+| `orka: Operation not permitted` when accessing shared storage over SSH | Grant Full Disk Access to `sshd-keygen-wrapper` (System Settings > Privacy & Security > Full Disk Access), then save or commit the image to keep the change |
+| iCloud sign-in fails with "The action could not be completed" | Apple Virtualization framework limitation. Download the software through a web browser and install it manually |
+| `curl http://169.254.169.254/metadata/` times out right after boot | The metadata server isn't ready yet. Gate on it with `until curl -fs --max-time 2 http://169.254.169.254/metadata/ >/dev/null; do sleep 1; done`. See [vm-commands.md](../commands/vm-commands.md) |
 
 ## Default Credentials
 
@@ -214,8 +226,8 @@ For MacStadium base images (ghcr.io/macstadium/orka-images/*):
 
 | Service | Default Port | Notes |
 |---------|-------------|-------|
-| SSH | Varies (not 22) | Check `orka3 vm list --output wide` |
-| Screen Sharing (VNC) | Varies | Check `orka3 vm list --output wide` |
+| SSH | Varies (not 22) | Check `orka vm list --output wide` |
+| Screen Sharing (VNC) | Varies | Check `orka vm list --output wide` |
 | Custom ports | User-defined | Use `--ports` flag |
 
 ## Getting Help
@@ -224,18 +236,23 @@ If you cannot resolve an issue:
 
 1. **Get Verbose Output:**
    ```bash
-   orka3 <command> --output json
+   orka <COMMAND> --output json
    ```
 
 2. **Collect Diagnostic Information:**
    ```bash
-   orka3 version
-   orka3 config view
-   orka3 node list --output wide
-   orka3 vm list --output wide
+   orka version
+   orka config view
+   orka node list --output wide
+   orka vm list --output wide
    ```
 
-3. **Contact MacStadium Support:**
+3. **Turn on Integration Debug Logging (if a CI integration is involved):**
+   - Jenkins: add a log recorder for `io.jenkins.plugins.orka` at level `ALL`
+   - GitLab: run the runner with `gitlab-runner --debug run`
+   - GitHub Actions integration: set `LOG_LEVEL=debug`
+
+4. **Contact MacStadium Support:**
    - Provide CLI version, cluster version, and error messages
    - Include diagnostic output
    - Describe what you were trying to accomplish

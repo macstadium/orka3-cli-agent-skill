@@ -1,6 +1,6 @@
 # Configuration and Utility Commands Reference
 
-This reference provides detailed syntax and examples for configuration, authentication, and utility Orka3 CLI commands.
+This reference provides detailed syntax and examples for configuration, authentication, and utility Orka CLI commands.
 
 ## Contents
 - [Configuration Commands](#configuration-commands)
@@ -10,13 +10,13 @@ This reference provides detailed syntax and examples for configuration, authenti
 
 ## Configuration Commands
 
-### orka3 config set
+### orka config set
 
-Set the Orka service URL for your environment.
+Set the Orka service URL for your environment. `orka` (4.x) and `orka3` (3.x) share this setting and the `orka` kubeconfig context, so switching between a 3.6 and a 4.0 cluster means running `config set --api-url` and logging in again with either CLI. See "Which CLI" in `SKILL.md`.
 
 **Syntax:**
 ```bash
-orka3 config set --api-url <URL> [flags]
+orka config set --api-url <URL> [flags]
 ```
 
 **Options:**
@@ -25,42 +25,50 @@ orka3 config set --api-url <URL> [flags]
 
 **Examples:**
 ```bash
-orka3 config set --api-url http://10.221.188.20
-orka3 config set --api-url https://company.orka.app
+orka config set --api-url http://10.221.188.20
+orka config set --api-url https://company.orka.app
 ```
 
 **Common API URLs:**
-- `http://10.221.188.20` — Standard Orka 2.1+ on-premises / MSDC
-- `https://company.orka.app` — Domain-based access (replace `company` with your org)
-- Check with your MacStadium team or support@macstadium.com if you don't know your API URL
+- `http://10.221.188.20`: environments first deployed with Orka 2.1 or later
+- `http://10.221.188.100`: environments first deployed before Orka 2.1
+- `https://company.orka.app`: built-in Orka domain (replace `company` with your org), or your external custom domain
+- If the cluster has public NAT IPs or a custom domain for the Orka API, use the public URL. The internal IP times out on those clusters.
+- Find your API URL in the IP Allocation table in My Cloud (MacStadium Portal), or ask support@macstadium.com
 
-### orka3 config view
+**`--api-url` does not change kubeconfig.** It sets only the Orka API URL the CLI uses. The cluster's `server` entry in `~/.kube/config` points to the Kubernetes API server, a separate endpoint (for example `10.221.188.19` on TCP 6443, while the Orka API is at `10.221.188.20`). So `kubectl config view` can still show an IP address after you set `--api-url` to a hostname. That's expected, not a failed config change.
+
+### orka config view
 
 View the current local Orka CLI configuration.
 
 **Syntax:**
 ```bash
-orka3 config view [flags]
+orka config view [flags]
 ```
 
 ## Default Namespace Detection (v3.5.2+)
 
-The Orka CLI now automatically reads the default namespace from your orka kubeconfig context, eliminating the need to repeatedly specify namespaces in commands.
+The Orka CLI reads the default namespace from your `orka` kubeconfig context, so you don't need to pass a namespace on every command.
 
 **Namespace Resolution Hierarchy (highest to lowest priority):**
 1. `--namespace` / `-n` flag on command
 2. `ORKA_DEFAULT_NAMESPACE` environment variable
-3. Namespace from orka kubeconfig context
+3. Namespace set on the `orka` context in your kubeconfig
 4. Falls back to `orka-default`
 
-**Setting a Custom Default Namespace:**
-```bash
-# Option 1: Environment variable (session or persistent)
-export ORKA_DEFAULT_NAMESPACE=my-team-namespace
-orka3 vm list  # Uses my-team-namespace
+**Scope:** this order applies only to the `vm`, `node`, `imagecache`, `registrycredential`, `rolebinding`, and `serviceaccount` commands, plus on Orka 4.0 `emulator` and `rbac --role dev`, for every user, not only admins. `vm-config` and `emulator-config` always use `orka-default`. `orka upgrade service` doesn't follow it: its `--namespace` flag always defaults to `orka-default` and ignores both the environment variable and the kubeconfig context.
 
-# Option 2: kubectl context (persistent)
-kubectl config set-context orka --namespace=orka-default
+**Setting a lasting default namespace:** use the environment variable, for example in your shell profile:
+```bash
+export ORKA_DEFAULT_NAMESPACE=<NAMESPACE>
+```
+
+Setting the namespace on the context (`kubectl config set-context orka --namespace=<NAMESPACE>`) works only until the next `orka user login` or `orka user set-token`: both reset the `orka` context namespace to `orka-default` every time they run. Don't recommend the context as a persistent default.
+
+**Commands land in an unexpected namespace:** the environment variable beats the kubeconfig context, so check for and unset a stale `ORKA_DEFAULT_NAMESPACE`:
+```bash
+unset ORKA_DEFAULT_NAMESPACE
 ```
 
 **Requirements:**
@@ -69,13 +77,13 @@ kubectl config set-context orka --namespace=orka-default
 
 ## Authentication Commands
 
-### orka3 login
+### orka login
 
 Log in to your Orka cluster with MacStadium Customer Portal credentials.
 
 **Syntax:**
 ```bash
-orka3 login [flags]
+orka login [flags]
 ```
 
 **Notes:**
@@ -83,67 +91,72 @@ orka3 login [flags]
 - Token stored in `~/.kube/config`
 - Token valid for 1 hour
 
-### orka3 user get-token
+### orka user get-token
 
 Print your authentication token from ~/.kube/config.
 
 **Syntax:**
 ```bash
-orka3 user get-token [flags]
+orka user get-token [flags]
 ```
 
-### orka3 user set-token
+### orka user set-token
 
 Log in with a valid authentication token.
 
 **Syntax:**
 ```bash
-orka3 user set-token <TOKEN> [flags]
+orka user set-token <TOKEN> [flags]
 ```
 
 ## Utility Commands
 
-### orka3 completion
+### orka completion
 
 Generate shell autocompletion scripts.
 
 **Syntax:**
 ```bash
-orka3 completion {bash|fish|powershell|zsh} [flags]
+orka completion {bash|fish|powershell|zsh} [flags]
 ```
 
 **Examples:**
 ```bash
 # Bash (load current session)
-source <(orka3 completion bash)
+source <(orka completion bash)
 
 # Bash (persist - Linux)
-orka3 completion bash > /etc/bash_completion.d/orka3
+orka completion bash > /etc/bash_completion.d/orka
 
 # Bash (persist - macOS)
-orka3 completion bash > $(brew --prefix)/etc/bash_completion.d/orka3
+orka completion bash > $(brew --prefix)/etc/bash_completion.d/orka
 
 # Zsh (load current session)
-source <(orka3 completion zsh)
+source <(orka completion zsh)
 
 # Zsh (persist - Linux)
-orka3 completion zsh > "${fpath[1]}/_orka3"
+orka completion zsh > "${fpath[1]}/_orka"
 
 # Zsh (persist - macOS)
-orka3 completion zsh > $(brew --prefix)/share/zsh/site-functions/_orka3
+orka completion zsh > $(brew --prefix)/share/zsh/site-functions/_orka
 ```
 
-### orka3 version
+### orka version
 
-Print the current version of the Orka CLI.
+Print the local CLI version and the versions of the Orka API server and operator on the cluster.
 
 **Syntax:**
 ```bash
-orka3 version [flags]
+orka version [--client] [flags]
 ```
 
-**Output Includes:**
-- CLI build information
-- Compatibility with Orka cluster
-- Upgrade Service operator version (v3.6+)
-- Upgrade Service agent version per node (v3.6+)
+**Options:**
+- `--client` - Print only the local CLI version, without contacting the cluster
+
+**Output fields:**
+- `Client Version`: your local CLI (`v4.x` for `orka`, `v3.x` for `orka3`)
+- `API Version`: Orka API server
+- `Operator Version`: Orka operator (webhooks and CRDs ship with it and match its version)
+- `Upgrade Service Operator Version`, `Upgrade Service Cluster Agent Version`: only when Upgrade Service is installed
+
+Per-node Virtual Kubelet and Orka Engine versions come from `orka node list -o wide` (`VERSION` and `RUNTIME`). Components can report different numbers on the same cluster because a patch release only bumps what it changed. See "Checking component versions" in `references/workflows/upgrade-workflows.md`.

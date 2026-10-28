@@ -1,14 +1,14 @@
 # Node Commands Reference
 
-This reference provides detailed syntax and examples for node-related Orka3 CLI commands.
+This reference provides detailed syntax and examples for node-related Orka CLI commands.
 
-## orka3 node list
+## orka node list
 
 Show information about Orka nodes.
 
 **Syntax:**
 ```bash
-orka3 node list [<NAME>] [--namespace <NS>] [--output <FORMAT>] [flags]
+orka node list [<NAME>] [--namespace <NS>] [--output <FORMAT>] [flags]
 ```
 
 **Options:**
@@ -17,20 +17,28 @@ orka3 node list [<NAME>] [--namespace <NS>] [--output <FORMAT>] [flags]
 
 **Examples:**
 ```bash
-orka3 node list
-orka3 node list --output wide
-orka3 node list mini-1
-orka3 node list --namespace orka-test
-orka3 node list mini-arm -o wide
+orka node list
+orka node list --output wide
+orka node list mini-1
+orka node list --namespace orka-test
+orka node list mini-arm -o wide
 ```
 
-## orka3 node tag (Admin)
+**Notes:**
+- JSON keys: `name`, `ip`, `status` (`READY`/`NOT READY`), `architecture`, `tags`, `allocatableCpu`, `availableCpu`, `allocatableMemory`, `availableMemory`, `allocatableGpu`, `availableGpu`, `os`, `runtime`, `version`, and, on 3.6 only, `upgradeAgent` (the Upgrade Service agent version; Orka 4.0 doesn't return it). Capacity used = allocatable - available
+- A node cordoned in Kubernetes (`SchedulingDisabled`) still shows `READY` with free capacity here, and deploys to it fail with generic errors (see `references/troubleshooting/deployment-issues.md`). Admins with kubectl access can see it in `kubectl get nodes`
+
+```bash
+orka node list -o json | jq -r '.[] | "\(.name) \(.allocatableCpu - .availableCpu)/\(.allocatableCpu) CPU used"'
+```
+
+## orka node tag (Admin)
 
 Tag a node for targeted VM deployment (set node affinity).
 
 **Syntax:**
 ```bash
-orka3 node tag <NODE_NAME> <TAG> [--namespace <NS>] [flags]
+orka node tag <NODE_NAME> <TAG> [--namespace <NS>] [flags]
 ```
 
 **Tag Requirements:**
@@ -41,33 +49,33 @@ orka3 node tag <NODE_NAME> <TAG> [--namespace <NS>] [flags]
 
 **Examples:**
 ```bash
-orka3 node tag mini-1 jenkins
-orka3 node tag mini-1 jenkins --namespace orka-test
-orka3 node list mini-1 --output wide  # Verify tag
+orka node tag mini-1 jenkins
+orka node tag mini-1 jenkins --namespace orka-test
+orka node list mini-1 --output wide  # Verify tag
 ```
 
-## orka3 node untag (Admin)
+## orka node untag (Admin)
 
 Remove a tag from a node.
 
 **Syntax:**
 ```bash
-orka3 node untag <NODE_NAME> <TAG> [--namespace <NS>] [flags]
+orka node untag <NODE_NAME> <TAG> [--namespace <NS>] [flags]
 ```
 
 **Examples:**
 ```bash
-orka3 node untag mini-1 my-tag
-orka3 node untag mini-1 my-tag --namespace orka-test
+orka node untag mini-1 my-tag
+orka node untag mini-1 my-tag --namespace orka-test
 ```
 
-## orka3 node namespace (Admin)
+## orka node namespace (Admin)
 
 Move Orka nodes across namespaces.
 
 **Syntax:**
 ```bash
-orka3 node namespace <NODE> [--namespace <CURRENT_NS>] <TARGET_NS> [flags]
+orka node namespace <NODE> [--namespace <CURRENT_NS>] <TARGET_NS> [flags]
 ```
 
 **Options:**
@@ -75,7 +83,12 @@ orka3 node namespace <NODE> [--namespace <CURRENT_NS>] <TARGET_NS> [flags]
 
 **Examples:**
 ```bash
-orka3 node namespace mini-1 orka-test
-orka3 node namespace mini-1 --namespace orka-test orka-production
-orka3 node namespace mini-1 --namespace orka-production orka-default
+orka node namespace mini-1 orka-test
+orka node namespace mini-1 --namespace orka-test orka-production
+orka node namespace mini-1 --namespace orka-production orka-default
 ```
+
+**Notes:**
+- Refused while VMs are running on the node: `cannot move node "<NODE>" to namespace "<NS>" because the node has running VMs. Please remove the VMs before attempting to move the node`. Drain first (wait for or delete the VMs), then move
+- Apple silicon nodes can't be moved into a namespace created with `--enable-custom-pods` (`arm nodes cannot be moved to namespaces with custom pods enabled`)
+- Node tags travel with the node
