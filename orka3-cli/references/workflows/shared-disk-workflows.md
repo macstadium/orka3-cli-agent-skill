@@ -44,13 +44,13 @@ Add the following to your EC2 Mac instance user data script:
 ```bash
 #!/bin/bash
 export VM_SHARED_DISK_SIZE=500
-/usr/local/bin/bootstrap-orka <eks-cluster-name> <aws-region> <orka-engine-license-key>
+/usr/local/bin/bootstrap-orka <EKS_CLUSTER_NAME> <AWS_REGION> <ORKA_ENGINE_LICENSE_KEY>
 ```
 
 Replace:
-- `<eks-cluster-name>` with your EKS cluster name
-- `<aws-region>` with your AWS region (e.g., `us-east-1`)
-- `<orka-engine-license-key>` with your Orka license key
+- `<EKS_CLUSTER_NAME>` with your EKS cluster name
+- `<AWS_REGION>` with your AWS region (e.g., `us-east-1`)
+- `<ORKA_ENGINE_LICENSE_KEY>` with your Orka license key
 - `500` with your desired disk size in GB
 
 ### Verification
@@ -100,29 +100,29 @@ Re-run Ansible to apply changes.
 
 ## First-Time Per-Host Disk Initialization
 
-After enabling shared disk and provisioning a host, the guest-visible shared disk arrives **unformatted**. You must format it once per host — subsequent VMs on that host auto-mount at `/Volumes/shared` with no additional setup.
+After enabling shared disk and provisioning a host, the guest-visible shared disk arrives **unformatted**. You must format it once per host. Subsequent VMs on that host auto-mount at `/Volumes/shared` with no additional setup.
 
 This applies to **both AWS and on-prem** deployments.
 
 ```bash
 # 1. Deploy a VM on the host
-orka3 vm deploy init-vm --image <IMAGE> --node <HOST_NODE>
+orka vm deploy init-vm --image <IMAGE> --node <HOST_NODE>
 
 # 2. In the guest, find the unformatted disk
 diskutil list internal physical
-# Look for an unformatted disk (no partition scheme) — note its identifier (e.g., disk1)
+# Look for an unformatted disk (no partition scheme): note its identifier (e.g., disk1)
 
 # 3. Format the disk (JHFS+ for macOS compatibility)
-diskutil eraseDisk -noEFI JHFS+ shared /dev/<disk-identifier>
+diskutil eraseDisk -noEFI JHFS+ shared /dev/<DISK_IDENTIFIER>
 
 # 4. Verify mount
 ls /Volumes/shared
 
 # 5. Clean up init VM
-orka3 vm delete init-vm
+orka vm delete init-vm
 ```
 
-Once formatted, the disk **persists across host reboots** — this is a one-time operation per host. All future VMs deployed on that host will auto-mount the shared disk at `/Volumes/shared`.
+Once formatted, the disk **persists across host reboots**. This is a one-time operation per host. All future VMs deployed on that host will auto-mount the shared disk at `/Volumes/shared`.
 
 ## Requirements Checklist
 
@@ -145,7 +145,7 @@ Before enabling shared attached disks, verify:
 
 If shared disk is enabled, only one VM can run per Apple Silicon node. To run multiple VMs:
 - Disable the shared disk feature, OR
-- Use Intel nodes for multi-VM scenarios
+- Use Intel nodes for multi-VM scenarios (Orka 3.6 and earlier; Orka 4.0 has no Intel nodes)
 
 ### Configuration Changes Not Taking Effect
 

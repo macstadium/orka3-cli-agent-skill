@@ -11,26 +11,27 @@ Repo: https://github.com/macstadium/orka-teamcity-plugin
 
 ## What it does
 
-A TeamCity server plugin (Java/Gradle) that adds Orka as a cloud agent provider. Once configured, TeamCity automatically provisions ephemeral Orka VMs as build agents on demand and tears them down after jobs complete. No scripting required — all lifecycle management happens inside TeamCity.
+A TeamCity server plugin that adds Orka as a cloud agent provider. Once a per-project cloud profile is configured, TeamCity provisions ephemeral Orka VMs as build agents on demand and tears them down after jobs complete. No scripting required: all lifecycle management happens inside TeamCity.
+
+Current plugin release: 2.0.2 (2026-06-24), published on the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/13662-orka-by-macstadium).
 
 ## Requirements
 
 - TeamCity 2023.11 or later
 - Java 11, 17, or 21 on the TeamCity server
 - Orka VM base image with SSH (password auth) enabled and TeamCity build agent pre-installed
-- **Bidirectional network access:** TeamCity server must reach the Orka endpoint, and Orka VMs must reach the TeamCity server
+- A service account token (see below)
+- **Network access:** the TeamCity server must be connected to the Orka environment through VPN (a VPN client for temporary connectivity, or a site-to-site tunnel), and Orka VMs must reach the TeamCity server
 
 ## Setup
 
-**1. Build the plugin:**
-```bash
-./gradlew build
-# Output: macstadium-orka-server/build/distributions/*.zip
-```
+**1. Install the plugin** from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/13662-orka-by-macstadium).
 
-**2. Install in TeamCity:**
-- Administration > Server Administration > Plugins List > Upload plugin zip
-- Enable the plugin after upload
+**2. Create a service account token.** Personal tokens expire after one hour and break agent provisioning:
+```bash
+orka sa create teamcity
+orka sa token teamcity
+```
 
 **3. Prepare the VM base image:**
 
@@ -41,40 +42,41 @@ The base image must have:
 
 ```bash
 # On the VM, after agent syncs and you've stopped it:
-orka3 vm save <vm-name> <base-image-name>
+orka vm save <VM_NAME> <NEW_IMAGE_NAME>
 # or commit:
-orka3 vm commit <vm-name>
+orka vm commit <VM_NAME>
 
 # Create a VM config from the image:
-orka3 vmc create <config-name> --image <base-image-name>
+orka vmc create <VM_CONFIGURATION_NAME> --image <NEW_IMAGE_NAME>
 ```
 
-**4. Configure a cloud profile** — see below.
+**4. Configure a cloud profile:** see below.
 
 ## Configuration in TeamCity
 
-Go to Projects > (your project) > Edit Project Settings > Cloud Profiles > Create new profile.
+Go to Projects > (your project) > Edit Project Settings > Cloud Profiles > Create new profile, and set **Cloud type** to **Orka Cloud**.
 
-| Field | Value |
-|-------|-------|
-| Cloud type | Orka Cloud |
-| Orka endpoint | Orka API URL from your IP plan |
-| Orka user email | Orka user account email |
-| Orka password | Orka user account password |
-| VM template | VM config name created above |
-| VM user | SSH user on the VM (default: `admin`) |
-| VM SSH password | SSH password for the VM user |
-| Maximum instances count | Cap on simultaneous agents |
-| Agent Pool | TeamCity agent pool to assign agents to |
-| Agent directory | Path to agent install on the VM, e.g. `/Users/admin/BuildAgent/` |
+| Field | Required | Value |
+|-------|----------|-------|
+| Orka endpoint | Yes | Orka API URL, from the IP Allocation table in My Cloud |
+| Orka Token | Yes | Service account token from `orka sa token <SERVICE_ACCOUNT_NAME>` |
+| VM Config | Yes | VM config name created above |
+| Namespace | Yes | Namespace VMs deploy into. Must match the service account's access |
+| VM user | Yes | SSH user on the deployed VM |
+| VM SSH password | Yes | SSH password for that user |
+| Maximum instances count | No | Cap on concurrent agents. Blank means no limit |
+| Agent pool | No | TeamCity agent pool new agents join |
+| Agent directory | No | Path to agent install on the VM, e.g. `/Users/admin/BuildAgent/` |
+| Node mappings | No | Overrides the host address used to reach a VM. `PRIVATE_HOST;PUBLIC_HOST` pairs, one per line. Use when your network's address range overlaps with Orka's |
 
-**Note:** The plugin uses Orka user credentials (email + password), not a service account token. This is the plugin's own auth model — different from all other integrations.
+**Auth:** the service account token is the only auth the plugin uses. There is no username/password option.
 
 ## Gotchas
 
 - **Bidirectional connectivity is required.** Unlike GitLab and Buildkite, the TeamCity server initiates connections to the Orka VM (for agent management). Both sides need network access to each other.
-- **"Agent Push" is not supported.** Do not attempt to push agents from TeamCity to the VM.
-- **Agent must be pre-installed and synced on the base image.** If the agent version on the image doesn't match the server, TeamCity will attempt an upgrade on every VM start — slow and unreliable. Sync it once before saving the image.
+- **"Agent Push" is not supported.** Agents are only created through the cloud profile.
+- **Agent must be pre-installed and synced on the base image.** If the agent version on the image doesn't match the server, TeamCity will attempt an upgrade on every VM start, which is slow and unreliable. Sync it once before saving the image.
 - **SSH uses password auth, not key auth.** Configure `VM SSH password` in the cloud profile.
-- **Auth model differs from other integrations.** The plugin uses Orka user email + password, not a service account token. Service account tokens are not applicable here.
-- **Java version matters.** Build the plugin with Java 11+. If `JAVA_HOME` is wrong, set it: `export JAVA_HOME=$(/usr/libexec/java_home -v 11)`.
+- **Use a service account token, not a personal token.** Personal tokens expire after one hour and break agent provisioning.
+- **Known issue: first ARM deploy on a node can time out.** The first deployment of an Apple silicon agent from a VM config on a given node may time out. Subsequent deployments on that node succeed.
+- **Support:** open a ticket in the [MacStadium Portal](https://portal.macstadium.com) and include the plugin's server-side logs.

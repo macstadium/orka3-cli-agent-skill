@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-Structured Markdown context for AI agents to work accurately with the Orka3 CLI. Load it into any agent that supports custom instructions or project context, and it will give you correct `orka3` commands instead of guessing.
+Structured Markdown context for AI agents to work accurately with the Orka3 CLI. Load it into any agent that supports custom instructions or project context, and it will give you correct `orka` commands instead of guessing. From Orka 4.0 the CLI is `orka`; on Orka 3.6 and earlier it's `orka3`, and the skill tells the agent which to use.
 
 ## What's in this skill
 
@@ -18,15 +18,15 @@ Structured Markdown context for AI agents to work accurately with the Orka3 CLI.
 
 | Agent | Execution | Installation method |
 |-------|-----------|---------------------|
-| **Claude Code** | Runs `orka3` commands directly | Native skills directory |
-| **Gemini CLI** | Runs `orka3` commands directly | Project context file |
+| **Claude Code** | Runs `orka` (or `orka3`) commands directly | Native skills directory |
+| **Gemini CLI** | Runs `orka` (or `orka3`) commands directly | Project context file |
 | **Cursor** | Guidance only | Project or global rules |
 | **Windsurf** | Guidance only | Project or global rules |
 | **GitHub Copilot** | Guidance only | Repo instructions file |
 | **Claude Desktop** | Guidance only | Project knowledge |
 | **ChatGPT / other** | Guidance only | Custom instructions or file upload |
 
-**Execution** means the agent can call `orka3` directly on your machine. **Guidance only** means the agent gives you the correct commands; you run them yourself. Either way, the skill content is the same.
+**Execution** means the agent can call `orka` (or `orka3` on a 3.x cluster) directly on your machine. **Guidance only** means the agent gives you the correct commands; you run them yourself. Either way, the skill content is the same.
 
 > **Note:** When using an execution-capable agent, make sure you're connected to your Orka cluster via VPN before invoking CLI commands.
 > **Important:** AI agents can make mistakes, especially with destructive operations like deleting VMs or modifying namespaces. Always review what the agent plans to do before confirming, and keep a human in the loop for anything touching production infrastructure.
@@ -34,7 +34,7 @@ Structured Markdown context for AI agents to work accurately with the Orka3 CLI.
 ## Prerequisites
 
 - Access to an Orka3 cluster
-- Orka3 CLI installed and on your `$PATH` (`orka3`)
+- The Orka CLI installed and on your `$PATH`: `orka` for Orka 4.x clusters, `orka3` for Orka 3.x clusters. Both can be installed side by side.
 - The AI agent of your choice
 
 ## Companion: MacStadium Docs MCP
@@ -43,7 +43,7 @@ For documentation lookup, use the [MacStadium Docs MCP server](https://docs.macs
 
 | | This skill | Docs MCP |
 |---|---|---|
-| **What it does** | Runs `orka3` commands and guides operational tasks | Answers questions by searching the MacStadium documentation |
+| **What it does** | Runs `orka` (or `orka3`) commands and guides operational tasks | Answers questions by searching the MacStadium documentation |
 | **Best for** | Deploying VMs, managing images, setting up CI/CD, troubleshooting cluster state | Looking up feature details, understanding architecture, finding configuration options |
 | **Agent access** | Execution-capable agents run commands directly | Any MCP-compatible agent |
 
@@ -151,7 +151,7 @@ Once loaded, ask your agent about anything Orka3-related:
 
 ```
 "Deploy 3 VMs with macOS Sonoma"
-"What flags does orka3 vm deploy accept?"
+"What flags does orka vm deploy accept?"
 "Show me all running VMs in namespace dev"
 "Set up a service account for CI/CD"
 "Help me troubleshoot a failed VM deployment"
@@ -187,12 +187,15 @@ Execution-capable agents (Claude Code, Gemini CLI) will run the commands directl
 - Configure access control with rolebindings
 - VM shared attached disk configuration (AWS and on-prem)
 - Log sources for deep troubleshooting (v3.4+)
+- Prometheus monitoring for nodes, the Orka operator, and CI runners
+- Orka Burst capacity (v3.3+)
 
 ### Automation
 - Create and manage service accounts
 - Generate authentication tokens
 - Create VM configuration templates
-- Set up CI/CD pipelines
+- Set up CI/CD pipelines (GitHub Actions, GitLab, Buildkite, Jenkins, Packer)
+- Clean up leaked CI VMs safely
 
 ## Architecture support
 
@@ -226,6 +229,10 @@ The archive is written to `dist/orka3-cli-v<VERSION>.skill`.
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Acknowledgments
+
+Many of the operational details in this skill, including the real `-o json` output shapes, push status values, the guest `sync` step before saving or pushing images, VM metadata, Apple silicon capacity planning, monitoring, Orka Burst, and the Jenkins and GitHub Actions integration references, come from Robert Elwell's work testing Orka agent playbooks against a live cluster.
 
 ## License
 

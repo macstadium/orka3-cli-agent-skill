@@ -5,6 +5,8 @@ This guide covers VM scaling, disk management, and resource optimization.
 ## Contents
 - [Scaling VMs for Load Testing](#scaling-vms-for-load-testing)
 - [VM Disk Management Workflow](#vm-disk-management-workflow)
+- [Node Disk Sizing and Storage Usage](#node-disk-sizing-and-storage-usage)
+- [Apple Silicon Capacity (VM Slots)](#apple-silicon-capacity-vm-slots)
 - [Resource Optimization](#resource-optimization)
 - [Scheduler Options](#scheduler-options)
 - [Parallel VM Deployment Patterns](#parallel-vm-deployment-patterns)
@@ -15,7 +17,7 @@ This guide covers VM scaling, disk management, and resource optimization.
 
 ```bash
 # 1. Create VM config for load testing
-orka3 vmc create load-test-vm \
+orka vmc create load-test-vm \
   --image sonoma-configured \
   --cpu 4 \
   --memory 8 \
@@ -23,24 +25,25 @@ orka3 vmc create load-test-vm \
   --tag-required=false
 
 # 2. Tag nodes that can handle load testing
-orka3 node tag mini-arm-1 load-testing
-orka3 node tag mini-arm-2 load-testing
-orka3 node tag mini-arm-3 load-testing
+orka node tag mini-arm-1 load-testing
+orka node tag mini-arm-2 load-testing
+orka node tag mini-arm-3 load-testing
 
 # 3. Deploy multiple VMs with generated names
+#    (Apple silicon: at most 2 VMs per node, so 10 VMs need at least 5 nodes)
 for i in {1..10}; do
-  orka3 vm deploy load-test --config load-test-vm --generate-name
+  orka vm deploy load-test --config load-test-vm --generate-name
 done
 
 # 4. List all VMs
-orka3 vm list --output wide
+orka vm list --output wide
 
 # 5. Get VM IPs for load testing script
-orka3 vm list -o json | jq -r '.items[] | select(.name | startswith("load-test")) | .ip'
+orka vm list -o json | jq -r '.[] | select(.name | startswith("load-test")) | .ip'
 
 # 6. After load testing, clean up all VMs
-orka3 vm list -o json | jq -r '.items[] | select(.name | startswith("load-test")) | .name' | \
-  while read vm; do orka3 vm delete $vm; done
+orka vm list -o json | jq -r '.[] | select(.name | startswith("load-test")) | .name' | \
+  while read vm; do orka vm delete "$vm"; done
 ```
 
 ## VM Disk Management Workflow
@@ -49,39 +52,73 @@ orka3 vm list -o json | jq -r '.items[] | select(.name | startswith("load-test")
 
 ### Apple Silicon - Simple resize
 
-```bash
-# 1. Deploy VM
-orka3 vm deploy my-vm --image sonoma-90gb --cpu 4
+Requires Orka VM Tools 3.6.0 or later installed in the guest (3.6 and 4.0 VM Tools both work on 3.6 and 4.0 clusters). Without it, the disk isn't resized and repartitioned.
 
-# 2. Resize to 150GB (automatic)
-orka3 vm resize my-vm 150
+```bash
+# 1. Deploy VM (image must include Orka VM Tools)
+orka vm deploy my-vm --image sonoma-90gb --cpu 4
+
+# 2. Resize to 150GB
+orka vm resize my-vm 150
 
 # 3. Verify resize (VM will restart)
-orka3 vm list my-vm --output wide
+orka vm list my-vm --output wide
 ```
 
 ### Intel - Resize with repartition
 
 ```bash
 # 1. Deploy VM
-orka3 vm deploy intel-vm --image ventura-90gb.img --cpu 6
+orka vm deploy intel-vm --image ventura-90gb.img --cpu 6
 
 # 2. Resize with automatic repartition (requires SSH access)
 orka3 vm resize intel-vm 150 --user "$VM_USER" --password "$VM_PASSWORD"
 
 # OR resize without automatic repartition
-orka3 vm resize intel-vm 150
+orka vm resize intel-vm 150
 # Then manually repartition via Disk Utility on the VM
 
 # 3. Save resized image for future use
-orka3 vm save intel-vm ventura-150gb.img
+orka vm save intel-vm ventura-150gb.img
 
 # 4. Clean up
-orka3 vm delete intel-vm
+orka vm delete intel-vm
 
 # 5. Deploy new VMs with larger disk
-orka3 vm deploy --image ventura-150gb.img
+orka vm deploy --image ventura-150gb.img
 ```
+
+## Node Disk Sizing and Storage Usage
+
+**Orka doesn't check free host disk before placing a VM.** If a node runs out of disk under write load, guest writes can fail, and in some cases this has caused unrecoverable APFS corruption on the VM. Host-level disk monitoring and alerting aren't available yet. Source: [Resiliency, HA, and DR](https://docs.macstadium.com/orka/orka-resources/resiliency-high-availability-and-disaster-recovery).
+
+**Size from maximum, not current, usage.** A sparse image using 20 GB today can grow toward its full provisioned size (say 90 GB) under write load. Per node, add up:
+- the maximum provisioned size of every VM you expect to run there at once, and
+- every distinct image cached on that node.
+
+That total must fit comfortably under the node's usable disk. MacStadium's standard node sizing assumes at least 1 TB; on smaller nodes, redo the math.
+
+**Reclaim space:** on cluster 3.6.3+, remove cached images you no longer deploy with `orka imagecache remove` (see `image-commands.md`). On earlier versions, upgrade to get it.
+
+**Where to check storage usage** (the MacStadium Portal doesn't show Orka storage usage):
+- **Harbor OCI storage:** the project summary in the Harbor web UI shows usage against quota. Harbor also exposes Prometheus metrics on 3.5+ (ask support for the endpoint).
+- **Host disk:** scrape the per-node exporters with Prometheus (see `monitoring.md`).
+- **Primary NFS export** (VM images, ISOs, default shared VM storage): not exposed through the CLI, portal, or any customer-facing metrics endpoint. Open a support ticket for a usage report or a larger allocation.
+
+## Apple Silicon Capacity (VM Slots)
+
+Apple silicon nodes run at most 2 VMs each (Apple EULA), regardless of free CPU or memory. Plan Apple silicon capacity in VM slots: 2 x the `READY` Apple silicon nodes in the namespace.
+
+```bash
+# Total Apple silicon VM slots in a namespace
+orka node list -n <NAMESPACE> -o json | \
+  jq '[.[] | select(.architecture == "arm64" and .status == "READY")] | length * 2'
+
+# Apple silicon VMs currently running in the namespace
+orka vm list -n <NAMESPACE> -o json | jq '[.[] | select(.architecture == "arm64")] | length'
+```
+
+Size VM configs at about half of a node's allocatable CPU and memory, so two VMs fit on each node. A config that takes more than half leaves the second slot unusable.
 
 ## Resource Optimization
 
@@ -89,39 +126,38 @@ orka3 vm deploy --image ventura-150gb.img
 
 ```bash
 # 1. Check overall cluster resources
-orka3 node list --output wide
+orka node list --output wide
 
 # 2. Identify underutilized nodes
 # Look for nodes with high available CPU/memory
 
-# 3. Check VM distribution
-orka3 vm list --output wide | awk '{print $NF}' | sort | uniq -c
+# 3. Check VM distribution (VMs per node)
+orka vm list -o json | jq -r 'group_by(.node)[] | "\(.[0].node) \(length)"'
 
-# 4. Identify over-provisioned VMs
-orka3 vm list --output wide | sort -k3 -nr  # Sort by CPU
-orka3 vm list --output wide | sort -k4 -nr  # Sort by memory
+# 4. Identify over-provisioned VMs (sorted by CPU, highest first)
+orka vm list -o json | jq -r 'sort_by(.cpu) | reverse | .[] | "\(.name) \(.cpu) CPU \(.memory)"'
 
 # 5. Right-size VM configs
 # Create smaller configs for less demanding workloads
-orka3 vmc create small-vm --image sonoma --cpu 2 --memory 4
-orka3 vmc create medium-vm --image sonoma --cpu 4 --memory 8
-orka3 vmc create large-vm --image sonoma --cpu 6 --memory 12
+orka vmc create small-vm --image sonoma --cpu 2 --memory 4
+orka vmc create medium-vm --image sonoma --cpu 4 --memory 8
+orka vmc create large-vm --image sonoma --cpu 6 --memory 12
 
 # 6. Use scheduler for better packing
-orka3 vmc create packed-vm \
+orka vmc create packed-vm \
   --image sonoma \
   --cpu 4 \
   --scheduler most-allocated
 
 # 7. Clean up unused images
-orka3 image list --output wide
+orka image list --output wide
 # Identify old/unused images
-orka3 image delete <OLD_IMAGE>
+orka image delete <OLD_IMAGE>
 
 # 8. Clean up unused VM configs
-orka3 vmc list --output wide
+orka vmc list --output wide
 # Identify obsolete configs
-orka3 vmc delete <OLD_CONFIG>
+orka vmc delete <OLD_CONFIG>
 ```
 
 ## Scheduler Options
@@ -133,10 +169,10 @@ orka3 vmc delete <OLD_CONFIG>
 
 ```bash
 # Spread VMs (default)
-orka3 vmc create spread-vm --image sonoma --cpu 4 --scheduler default
+orka vmc create spread-vm --image sonoma --cpu 4 --scheduler default
 
 # Pack VMs
-orka3 vmc create packed-vm --image sonoma --cpu 4 --scheduler most-allocated
+orka vmc create packed-vm --image sonoma --cpu 4 --scheduler most-allocated
 ```
 
 ## Parallel VM Deployment Patterns
@@ -145,7 +181,7 @@ orka3 vmc create packed-vm --image sonoma --cpu 4 --scheduler most-allocated
 
 ```bash
 for i in {1..5}; do
-  orka3 vm deploy build-$i --image sonoma:latest --cpu 4
+  orka vm deploy build-$i --image sonoma:latest --cpu 4
 done
 ```
 
@@ -153,7 +189,7 @@ done
 
 ```bash
 for i in {1..5}; do
-  orka3 vm deploy build --image sonoma:latest --cpu 4 --generate-name
+  orka vm deploy build --image sonoma:latest --cpu 4 --generate-name
 done
 ```
 
@@ -161,11 +197,11 @@ done
 
 ```bash
 # All VMs
-orka3 vm list -o json | jq -r '.items[].ip'
+orka vm list -o json | jq -r '.[].ip'
 
 # Filtered by name prefix
-orka3 vm list -o json | jq -r '.items[] | select(.name | startswith("build")) | .ip'
+orka vm list -o json | jq -r '.[] | select(.name | startswith("build")) | .ip'
 
 # With name and IP
-orka3 vm list -o json | jq -r '.items[] | "\(.name) \(.ip)"'
+orka vm list -o json | jq -r '.[] | "\(.name) \(.ip)"'
 ```

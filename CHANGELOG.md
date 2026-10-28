@@ -5,6 +5,130 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-10-28
+
+Orka 4.0. Verified against the Orka 4.0 release source, the published 4.0.0 CLI build, and macstadium-docs #383, #390, #394, #402, #406, #417, and #436. Major version because the CLI command changes.
+
+### Changed
+
+- **CLI renamed to `orka`.** Command examples, headings, and anchors use `orka`. `SKILL.md` has a new "Which CLI" section: `orka` is the 4.x CLI, `orka3` stays the 3.6 CLI, both install side by side and share the config file and the `orka` kubeconfig context, no alias ships, running the 4.0 CLI as `orka3` warns on stderr only, the optional `orka3` symlink bridge and its caveats, install with `brew install --cask orka` (the `orka` cask now serves 4.0.0 and installs alongside the `orka3` cask). Intel-only and removed commands, the Intel to Apple silicon migration, and other 3.6-only steps stay `orka3`. The skill name and directory are unchanged.
+- Android emulators are GA in Orka 4.0, no longer early access.
+- Emulator commands resolve the namespace like `vm` (`--namespace`, `ORKA_DEFAULT_NAMESPACE`, the `orka` context, then `orka-default`); emulator configurations always live in `orka-default`.
+- Workflow and troubleshooting examples use `orka rbac ... --role dev`. `rolebinding` is deprecated and hidden from `--help` in 4.0; 3.6 users get an `orka3 rb` note.
+- NFS-hosted images, `image`, `remote-image`, `vm save`, and `vm commit` marked deprecated in 4.0, with the exact stderr warning.
+- Pod quota text from 1.4.0 split by version: 3.6 fixed at `4`, 3.7.0-alpha tunable shared quota, 4.0 per-node limits.
+- The 3.6.3+ same-name re-cache known issue is marked fixed in Orka 4.0.
+
+### Added
+
+- `emulator-commands.md`: `emulator-config create`/`list`/`delete` (aliases `emc`, `emuconfig`), `--config` and `--grpc` on deploy, `--grpc=false` and `--device-profile ""` overrides, gRPC endpoint section, list columns including `-o wide`, CLI JSON keys (`relayIp`, `relayPort`, `grpcPort`), `PairedVMStopped` and `EmulatorUnschedulable`, sizing and density (about 5 to 6 GB of host memory per emulator, memory is the usual limit, CPU and memory come from the device profile, animation `adb` commands), REST paths, and the Play Store ADB limitation as a 4.0 known issue.
+- `vm-commands.md`: `--userdata` and `USERDATA-PHASE`, with run-once semantics, the meaning of `skipped`, and script visibility through Kubernetes read access. Removed `vm resize --user`/`--password`. `vm` and `image` reject unknown subcommands with a non-zero exit.
+- `admin-commands.md`: `rbac add-subject`/`list-subjects`/`remove-subject` with `--role admin|dev`, and the per-subcommand `rolebinding` deprecation messages.
+- `rest-api.md`: "Orka 4.0 API Changes" (removed routes return `404`, `cluster-info` drops `gpuPassthroughEnabled`, Intel-only fields return `400`, `netBoost` accepted and ignored, webhook rejection messages, 3.6 objects can still be updated and deleted, deprecation headers), emulator configuration endpoints, `config` and `grpc` on deploy, `grpcRelayPort`, `userdata`, and the `/api/v1/rbac` routes.
+- `upgrade-workflows.md`: "Upgrading to Orka 4.0" (requires 3.6, Intel worker nodes block the upgrade at the pre-check with no changes made, schedule with support), Orka-managed PDBs and other control plane changes, and the 4.0 per-node limits (`osx_node_orka_quota_job` default `2`, node pod quota `110`, emulators uncapped).
+- `deployment-issues.md`: `Not enough disk space on node <NODE> to deploy the VM`, and Intel image or setting rejections on 4.0.
+- `image-commands.md`, `image-issues.md`: `imagecache remove --all`/`--tags` skip uncached nodes (per-node `202`) on 4.0, cache record cleanup, and the 4.0 eviction fixes.
+- `jenkins.md`: "Orka 4.0" (plugin 2.10 works; `netBoost: false` is accepted and net boost stays on; Legacy IO and GPU Passthrough are rejected when turned on). Moved here from the 3.x release.
+- `node-commands.md`: `upgradeAgent` is a 3.6-only `node list -o json` key; 4.0 doesn't return it.
+- `monitoring.md`: 4.0 operator metrics (`vm_namespace` label, pending-VM queue metrics, exponential buckets, `orka-webhooks` metrics endpoint).
+
+### Removed
+
+- Documented the Orka 4.0 removals rather than deleting them, since Orka 3.6 remains the last Intel release and is supported through March 2028: `orka3 vm start|stop|suspend|resume|revert`, `orka3 image generate`, the `orka3 iso` and `orka3 remote-iso` commands, the `--iso`, `--gpu`, `--system-serial`, `--disable-net-boost`, and `--legacy-io` flags on `vm deploy` and `vm-config create`, and `--user`/`--password` on `vm resize`.
+
+### Fixed
+
+- `admin-commands.md`, `auth-issues.md`, `SKILL.md`: said `orka rbac add-subject --role admin` doesn't work on MacStadium-hosted clusters. It does on 4.0, including for custom-domain certificate uploads (tested by engineering on a lab cluster). The managed `orka-admin` service account from support is now described as the 3.6 hosted path only.
+- `emulator-commands.md` said gRPC on an emulator configuration was CLI-only. The REST API accepts `grpc` on configuration create and returns it in configuration responses.
+- `emulator-commands.md` said `--device-profile` needed Orka 4.0. It was already in 3.7.0-alpha; 4.0 adds `--config` and `--grpc`.
+- `emulator-commands.md` documented `--device`, `--cpu`, and `--memory` on `emulator deploy`, and a `--vm` filter on `emulator list`. The CLI has never accepted any of them. Removed, with a note so they don't get reintroduced.
+- Em dashes replaced throughout the skill.
+- `SKILL.md` said `--role admin` isn't usable on MacStadium-hosted clusters, contradicting `admin-commands.md`. It is on 4.0.
+- `admin-commands.md` suggested removing the admin role from an exposed service account token. Tokens can't be revoked one at a time, and `remove-subject --role admin` also strips the account's `orka-dev` access; delete the service account instead.
+- `vm-commands.md`, `SKILL.md`: dropped the 3.7.0-alpha VM Tools User Data exception. No 3.7.0-alpha VM Tools were published.
+- `upgrade-workflows.md`: the Intel pre-check message is `Orka 4.0 does not support Intel worker nodes. Remove these nodes from the cluster first:`. Upgrading to 4.0 is support-led; the Upgrade Service can't perform it yet.
+- `admin-commands.md`, `SKILL.md`: each `rolebinding` subcommand prints its own deprecation message; the `"rolebinding"` one appears only for a bare `orka rolebinding`.
+- `SKILL.md`: dropped the leftover host node macOS upgrade line.
+
+## [1.6.0] - 2026-10-28
+
+Ports Orka 3.x documentation changes from docs.macstadium.com (September to October 2026). Version tables, compatibility data, and known-issue lists are summarized with a link to the docs page instead of copied in full.
+
+### Added
+
+- `upgrade-workflows.md`: "Checking component versions" (`orka3 version` fields, `orka3 node list -o wide` `VERSION`/`RUNTIME`, `--client`, patch releases only bump changed components, link to the component matrix) and the on-prem `orka-ansible-onprem:3.6.4` installer re-pull note
+- `image-workflows.md`: "macOS Guest Compatibility" summary (macOS 27 Golden Gate needs a 26.6.2+ host and more than 2 GB of RAM, macOS 27 isn't signed off as a host OS, `latest` on MacStadium images means latest published), hardened image tagging and pre-caching, VM Tools needs macOS 13+
+- `image-issues.md`: known issue for in-place macOS 15.x and 26.x upgrades inside a VM, with the memory check and the installer workaround
+- `admin-commands.md`, `auth-issues.md`: hosted-cluster admin limits and the managed `orka-admin` service account (`orka3 sa token orka-admin`)
+- `migration-workflows.md`: NFS-to-OCI migration with Harbor, including CI/CD repointing
+- `scaling-workflows.md`: node disk sizing from maximum provisioned size, and where to check storage usage
+- `config-commands.md`: `config set --api-url` doesn't change the kubeconfig `server` entry; `orka3 version` output fields and `--client`
+- `rest-api.md`: Android emulator REST endpoints (3.7.0-alpha)
+- `emulator-commands.md`: `google_apis_playstore` images reject ADB (`device unauthorized`)
+- `SKILL.md`: Essential Context bullets for component versions and macOS guest rules; reference table entries updated
+
+### Changed
+
+- Placeholders in command examples are `<UPPER_SNAKE>` matching orka3 help (for example `<SERVICE_ACCOUNT_NAME>`, `<VM_CONFIGURATION_NAME>`, `<ORKA_API_URL>`)
+- "IP plan" references now say My Cloud
+
+### Fixed
+
+- `image-commands.md`: removed the `orka3 image list --arch amd64` example; `image list` has no `--arch` flag (drift check, skill PR #19)
+- `emulator-commands.md`: the device-profile example no longer uses a Play Store image
+
+## [1.5.0] - 2026-10-28
+
+Folds in verified findings from Robert Elwell's Orka agent playbooks, which were tested against a live Orka 3.6.3 cluster. Every item was checked against the Orka 3.6 CLI help, the Orka source, the public docs, or the integration repos before inclusion.
+
+### Added
+
+- `references/commands/rest-api.md`: Swagger UI, bearer auth with service-account tokens, endpoint paths, the `items` list wrapper, `customMetadata` on deploy, save/commit/push request bodies
+- `references/integrations/jenkins.md`: Orka by MacStadium plugin (v2.10) cloud and agent template fields, retention strategies, permanent agents, logging
+- `references/workflows/monitoring.md`: node exporter and operator scrape targets, Orka operator metric names (3.6), macOS vs Linux memory metrics, alerts for disk-driven cache eviction and CI backlog
+- `references/workflows/burst-workflows.md`: Orka Burst (3.3+) through the Portal API, with drain-before-disable ordering
+- `SKILL.md`: Apple silicon 2-VM-per-node limit and slot-based capacity, Orka 3.6 as the last Intel release, bare-array `-o json` shape
+- `vm-commands.md`: VM metadata server, `vm push` status values (`Ready`/`Failed`) and `-n`, guest `sync` before push/save/commit, save/commit require NFS image storage, display flag ranges, memory caps, `owner` in `vm list -o json`, deploy returns before macOS finishes booting
+- `image-commands.md`, `image-issues.md`: cache timing and eviction, cache job cost, never remove a cache during a deploy, pre-3.5.2 custom-namespace caching bugs, `Unauthorized` on push with a certificate-only kubeconfig
+- `vm-config-commands.md`: configs always live in `orka-default`, no update command (blue/green rollout), half-node sizing
+- `node-commands.md`, `admin-workflows.md`: `node namespace` is refused while VMs run (drain first), Apple silicon can't join custom-pods namespaces, cordoned nodes still show READY
+- `admin-commands.md`: service-account token lifetime and revocation details, custom-pods toleration, `rb list-subjects` JSON shape
+- `deployment-issues.md`: real 3.6 error strings, 2-VM limit error, cordoned-node symptom, RFC 1123 vs DNS-1035 name errors, on-prem node diagnosis
+- `cicd-workflows.md`: CI concurrency at or below slot capacity, trap-based VM cleanup, leaked-VM cleanup by owner/prefix/age, integration smoke test
+- `github-actions.md`: `GITHUB_PAT` (v1.1.15), `ORKA_NAMESPACE`, `MAX_RUNNERS`, tracker and deregistration settings, runner metric names
+- `gitlab.md`, `buildkite.md`, `packer.md`: missing settings, defaults, and concurrency guidance
+
+### Fixed
+
+- TeamCity: plugin 2.0.2 installs from the JetBrains Marketplace (no `./gradlew build`), authenticates only with a service account token (no email/password), and the profile has Namespace and Node mappings fields; added the first-ARM-deploy timeout known issue
+- Namespace resolution: `orka3 user login` and `orka3 user set-token` reset the `orka` context namespace to `orka-default`, so `ORKA_DEFAULT_NAMESPACE` is the lasting default; the precedence order applies only to `vm`, `node`, `imagecache`, `registrycredential`, `rolebinding`, `serviceaccount`; `orka3 upgrade service` always defaults to `orka-default`
+- `monitoring.md`: added the Orka server metrics target at `/api/v1/metrics` (GET check, HEAD returns 404)
+- VM Tools version guidance: any VM Tools 3.6.0 or later work on both 3.6 and 4.0 clusters (the 4.0.0 Homebrew release includes the fix for 3.6 hosts); 4.0 VM Tools are needed only for User Data
+- VM metadata: Orka reserves six exact keys (`orka_vm_id`, `orka_vm_name`, `orka_base_image`, `orka_cpu`, `orka_memory`, `orka_node_name`), not the `orka_` prefix
+- Image cache: a cache job requests 0.5 CPU from the scheduler, separate from what it uses; disk I/O is what slows running VMs. Eviction removes the least recently used images, not the oldest
+- `monitoring.md`: node exporter is installed by MacStadium's provisioning, so it's only present on MacStadium-hosted clusters
+- `upgrade-workflows.md`: removed the claim that service account tokens must be regenerated after an upgrade; no release note requires it
+- `burst-workflows.md`: the cluster ID query uses `nodes`, not `edges { node }` (`OrkaServiceConnection` has only `nodes` and `pageInfo`)
+- `packer.md`: check a timed-out push with `orka3 vm get-push-status -n <BUILDER_NS>`; the argument is a push job name, not the VM name
+- `gitlab.md`: warn that the upstream `troubleshooting.md` exists only on `master` and its mount-the-key advice doesn't work
+- `jenkins.md`: removed the Orka 4.0 section; this release covers 3.x only
+- Image cache: the custom-namespace fix is complete in 3.5.2, not 3.5.1; eviction triggers only when the pull needs more space than is free, with no percentage threshold
+- `SKILL.md`: `orka3 upgrade` JSON output is an object, not an array; `emulator` (3.7.0-alpha) uses the shared namespace resolver
+- `node-commands.md`: added `allocatableGpu`, `availableGpu`, `os`, and `upgradeAgent` JSON keys
+- `admin-commands.md`: `--no-expiration` wins without an error when passed with `--duration`
+- `deployment-issues.md`: the required-tag error is multi-line
+- Android emulator commands: `--platform` and `--image-type` are required with no defaults, the device flag is `--device-profile`, `emulator list` has no `--vm` filter, and connection details are `RELAY-IP`/`RELAY-PORT` (`relayIp`/`relayPort`), not `adbRelayIP`/`adbRelayPort`
+- `-o json` examples: `.[]` and `.[0].name`, not `.items[]` or `.name`
+- `orka3 vmc create` examples no longer pass `--namespace` (the flag doesn't exist)
+- `orka3 regcred remove <SERVER>`, not `regcred delete <NAME>`; `--password-stdin` instead of `--password`
+- Imagecache states are `Ready`, `Caching`, `Failed`, `Removing`, `RemoveFailed`
+- Apple silicon `vm resize` needs Orka VM Tools in the guest; it isn't automatic
+- `orka3 namespace list` is admin-only
+- Packer: `packer_push_timeout` isn't in plugin v3.1.2; debug flags are `no_delete_vm`/`no_create_image`
+- GitHub Actions: classic PATs are supported; private keys must be PKCS#1 RSA; `GITHUB_API_URL` is ignored
+- GitLab: the SSH key must be the contents of the `ORKA_SSH_KEY_FILE` CI/CD variable; a mounted key file is ignored, and it can't be masked because it's multi-line
+- Removed `grep`, `awk`, and `sort` pipes on CLI output in favor of built-in filtering or `-o json | jq`
+
 ## [1.4.0] - 2026-09-11
 
 ### Added
