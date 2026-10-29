@@ -50,8 +50,10 @@ For documentation lookup, use the [MacStadium Docs MCP server](https://docs.macs
 To add the Docs MCP to Claude Code:
 
 ```bash
-claude mcp add macstadium-docs --url https://docs.macstadium.com/mcp
+claude mcp add --transport http macstadium-docs https://docs.macstadium.com/mcp
 ```
+
+For other tools, see [Use these docs with AI tools](https://docs.macstadium.com/macstadium/macstadium-overview/use-these-docs-with-ai-tools).
 
 With both loaded, your agent handles "do this in Orka" and "what does this Orka feature do" without leaving the terminal.
 
