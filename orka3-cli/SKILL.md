@@ -224,6 +224,7 @@ Most questions are answerable from this file. Load references for full flag deta
 | Registry credential management | `references/commands/registry-commands.md` |
 | Namespace, SA, rolebinding flags, hosted-cluster admin limits | `references/commands/admin-commands.md` |
 | Node list/tag/namespace flags | `references/commands/node-commands.md` |
+| `orka upgrade` command flags (run, versions, status, history, service) | `references/commands/upgrade-commands.md` |
 | CLI config, login, completion | `references/commands/config-commands.md` |
 | Orka REST API (Swagger, auth, request/response shapes, emulator endpoints) | `references/commands/rest-api.md` |
 | VM config template flags | `references/commands/vm-config-commands.md` |
