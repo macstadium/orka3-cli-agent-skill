@@ -96,6 +96,42 @@ orka image delete <NAME> [<NAME2> ...] [flags]
 
 **CAUTION:** Cannot be undone. Affects VMs/configs using this image.
 
+### orka remote-image list
+
+**Deprecated in Orka 4.0.** List NFS-hosted images in the remote repository.
+
+**Syntax:**
+```bash
+orka remote-image list [<IMAGE_NAME> ...] [--output <FORMAT>] [flags]
+```
+
+**Options:**
+- `-o, --output string` - Output format: table|wide|json
+
+**Examples:**
+```bash
+orka remote-image list
+orka remote-image list 90gbsonomassh.orkasi --output json
+```
+
+### orka remote-image pull
+
+**Deprecated in Orka 4.0.** Pull an NFS-hosted image from the remote repository into the cluster. For OCI images, use `orka imagecache add` instead.
+
+**Syntax:**
+```bash
+orka remote-image pull <REMOTE_IMAGE_NAME> [<NEW_LOCAL_IMAGE>] [flags]
+```
+
+**Options:**
+- `-d, --description string` - Description for the new image (default: "Pulled from REMOTE_IMAGE")
+
+**Examples:**
+```bash
+orka remote-image pull 90gbventurassh.orkasi
+orka remote-image pull 90gbventurassh.orkasi 90gbventurassh2023.orkasi --description "pulled for the Ventura pool"
+```
+
 ## Image Cache Commands (Apple Silicon only)
 
 ### orka imagecache add (alias: ic)
