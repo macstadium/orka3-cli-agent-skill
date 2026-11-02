@@ -6,6 +6,8 @@
 # `orka3`, 4.0 and later `orka`. The Monday run checks the latest released `orka`
 # CLI instead (official/orka/latest.json, written by the CLI release workflow),
 # so it fails when a new release changes commands or flags the skill uses.
+# The Monday run is strict: a new CLI flag a command reference doesn't list fails
+# it too, and a failure posts to Slack through the SLACK_WEBHOOK_DRIFT_CHECK secret.
 name: CLI drift check
 
 on:
@@ -31,6 +33,9 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      # Read by the Notify Slack step's `if:`, which can't read secrets directly.
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_DRIFT_CHECK }}
     steps:
       - uses: actions/checkout@v7
 
@@ -57,4 +62,17 @@ jobs:
           echo "CLI_NAME=${name}" >> "$GITHUB_ENV"
 
       - name: Compare with the skill
-        run: python3 scripts/cli-drift-check.py --cli "$RUNNER_TEMP/$CLI_NAME" --binary-name "$CLI_NAME"
+        run: |
+          # The Monday run also fails on warnings: a new CLI flag a command reference doesn't list.
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then strict=--strict; else strict=; fi
+          python3 scripts/cli-drift-check.py --cli "$RUNNER_TEMP/$CLI_NAME" --binary-name "$CLI_NAME" $strict
+
+      - name: Notify Slack
+        # cancelled() too: a timeout ends the job cancelled, not failed.
+        if: (failure() || cancelled()) && github.event_name == 'schedule' && env.SLACK_WEBHOOK != ''
+        uses: slackapi/slack-github-action@v3
+        with:
+          webhook: ${{ env.SLACK_WEBHOOK }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "<@U08PC9TP2P2> :x: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Skill CLI drift check> failed against CLI ${{ env.VERSION }}: the orka3-cli skill is out of date with the latest release."
