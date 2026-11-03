@@ -233,10 +233,6 @@ The archive is written to `dist/orka-cli-v<VERSION>.skill`.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Acknowledgments
-
-Many of the operational details in this skill, including the real `-o json` output shapes, push status values, the guest `sync` step before saving or pushing images, VM metadata, Apple silicon capacity planning, monitoring, Orka Burst, and the Jenkins and GitHub Actions integration references, come from Robert Elwell's work testing Orka agent playbooks against a live cluster.
-
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE).
