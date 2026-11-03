@@ -3,6 +3,8 @@
 Repo: https://github.com/macstadium/orka-github-actions-integration  
 Image: `ghcr.io/macstadium/orka-github-runner:<TAG>`
 
+**Match the image to the cluster version.** From 1.2.0, the image bundles the Orka 4.0 `orka` CLI (the runner calls `orka` for every operation). For Orka 3.x clusters, use tag `1.1.15`, or build the image with `--build-arg ORKA_VERSION=<3.6 version>` (the Dockerfile installs `orka3` for versions below 4 and links `orka3` to `orka`).
+
 ## Contents
 - [What it does](#what-it-does)
 - [Prerequisites](#prerequisites)
