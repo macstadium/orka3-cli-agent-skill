@@ -70,9 +70,10 @@ jobs:
       - name: Notify Slack
         # cancelled() too: a timeout ends the job cancelled, not failed.
         if: (failure() || cancelled()) && github.event_name == 'schedule' && env.SLACK_WEBHOOK != ''
+        # DRIFT_CHECK_SLACK_MENTION is a repo variable, for example <@SLACK_USER_ID>.
         uses: slackapi/slack-github-action@v3
         with:
           webhook: ${{ env.SLACK_WEBHOOK }}
           webhook-type: incoming-webhook
           payload: |
-            text: "<@U08PC9TP2P2> :x: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Skill CLI drift check> failed against CLI ${{ env.VERSION }}: the orka3-cli skill is out of date with the latest release."
+            text: "${{ vars.DRIFT_CHECK_SLACK_MENTION }} :x: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Skill CLI drift check> failed against CLI ${{ env.VERSION }}: the orka3-cli skill is out of date with the latest release."
