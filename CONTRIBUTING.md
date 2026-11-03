@@ -1,6 +1,6 @@
-# Contributing to Orka3 CLI Claude Skill
+# Contributing to Orka CLI Claude Skill
 
-Thank you for your interest in contributing to the Orka3 CLI Claude Skill! This document provides guidelines for contributing to the project.
+Thank you for your interest in contributing to the Orka CLI Claude Skill! This document provides guidelines for contributing to the project.
 
 ## How to Contribute
 
@@ -8,12 +8,12 @@ Thank you for your interest in contributing to the Orka3 CLI Claude Skill! This 
 
 If you find a bug or have a suggestion for improvement:
 
-1. Check existing [GitHub Issues](https://github.com/macstadium/orka3-cli-claude-skill/issues) to see if it's already reported
+1. Check existing [GitHub Issues](https://github.com/macstadium/orka-cli-agent-skill/issues) to see if it's already reported
 2. If not, create a new issue with:
    - A clear, descriptive title
    - Steps to reproduce (for bugs)
    - Expected vs actual behavior
-   - Your environment (Claude Code version, Orka3 CLI version)
+   - Your environment (Claude Code version, Orka CLI version)
 
 ### Suggesting Improvements
 
@@ -32,7 +32,7 @@ Please open an issue to discuss your idea before submitting a pull request.
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/your-feature-name`)
 3. Make your changes
-4. Test the skill locally by copying to `~/.claude/skills/orka3-cli`
+4. Test the skill locally by copying to `~/.claude/skills/orka-cli`
 5. Commit your changes with a clear message
 6. Push to your fork
 7. Open a pull request
@@ -47,7 +47,7 @@ Please open an issue to discuss your idea before submitting a pull request.
 
 ### Checking commands and flags against the CLI
 
-The CLI drift check (`.github/workflows/cli-drift-check.yml`) runs on every pull request that touches `orka3-cli/`, and weekly. It compares the commands and flags in the skill with the help of a released CLI build, so an example that uses a flag the CLI doesn't have fails the check. It reports:
+The CLI drift check (`.github/workflows/cli-drift-check.yml`) runs on every pull request that touches `orka-cli/`, and weekly. It compares the commands and flags in the skill with the help of a released CLI build, so an example that uses a flag the CLI doesn't have fails the check. It reports:
 
 - **Errors:** a command heading, an example command, an example flag, or an Options list entry that the CLI doesn't have.
 - **Warnings:** a CLI flag that a command reference's Options list leaves out. These fail the check only with `--strict`.
@@ -115,11 +115,11 @@ Before submitting a pull request:
 
 1. Copy the skill to your Claude Code skills directory:
    ```bash
-   cp -r skill/* ~/.claude/skills/orka3-cli/
+   cp -r skill/* ~/.claude/skills/orka-cli/
    ```
 
 2. Test with Claude Code by asking questions like:
-   - "How do I deploy a VM with Orka3?"
+   - "How do I deploy a VM with Orka?"
    - "Show me how to set up CI/CD"
    - "What's the command to cache images?"
 
@@ -150,7 +150,7 @@ Project maintainers may remove, edit, or reject contributions that don't align w
 If you have questions about contributing:
 
 - Open a GitHub issue for project-related questions
-- Contact [MacStadium Support](https://support.macstadium.com) for Orka3-specific questions
+- Contact [MacStadium Support](https://support.macstadium.com) for Orka-specific questions
 
 ## License
 

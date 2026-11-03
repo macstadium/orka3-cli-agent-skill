@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Orka3 CLI Skill Test Harness
+Orka CLI Skill Test Harness
 
 Installs the skill from this repo and analyzes Claude Code sessions
 to measure reference-file routing efficiency.
@@ -28,7 +28,7 @@ def normalize(text: str) -> str:
 
 # Paths
 HOME = Path.home()
-SKILL_DIR = HOME / ".claude" / "skills" / "orka3-cli"
+SKILL_DIR = HOME / ".claude" / "skills" / "orka-cli"
 REPO_SKILL_DIR = Path(__file__).resolve().parent.parent / "skill"
 SESSIONS_DIR = HOME / ".claude" / "projects"
 
@@ -119,13 +119,13 @@ def analyze_session(session_path: Path) -> dict:
                             if isinstance(item, dict) and item.get('type') == 'tool_use':
                                 if item.get('name') == 'Read':
                                     path = item.get('input', {}).get('file_path', '')
-                                    if 'orka3-cli' in path.lower():
-                                        if '/.claude/skills/orka3-cli/' in path:
-                                            short_path = path.split('orka3-cli/')[-1]
+                                    if 'orka-cli' in path.lower():
+                                        if '/.claude/skills/orka-cli/' in path:
+                                            short_path = path.split('orka-cli/')[-1]
                                         elif '/skill/' in path:
                                             short_path = path.split('/skill/')[-1]
                                         else:
-                                            short_path = path.split('orka3-cli/')[-1]
+                                            short_path = path.split('orka-cli/')[-1]
 
                                         results['skill_reads'].append(short_path)
                                         results['total_reads'] += 1

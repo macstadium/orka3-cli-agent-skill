@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Skill renamed to `orka-cli`.** The repository is now `macstadium/orka-cli-agent-skill` (the old URL redirects), the skill directory is `orka-cli/`, and the skill name is `orka-cli`. If you installed the skill, remove `~/.claude/skills/orka3-cli` and install it again at `~/.claude/skills/orka-cli`. The skill still covers both `orka` (Orka 4.x) and `orka3` (Orka 3.x).
+
 ### Added
 
 - `upgrade-commands.md`: command reference for `orka upgrade run`, `versions`, `status`, `history`, `service status`, and `service agents`, with options from the 4.0.0 CLI's help. With an Options list per command, the Monday drift check now warns when a CLI release adds an `upgrade` flag.
@@ -14,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] - 2026-10-28
 
-Orka 4.0. Verified against the Orka 4.0 release source, the published 4.0.0 CLI build, and macstadium-docs #383, #390, #394, #402, #406, #417, and #436. Major version because the CLI command changes.
+Orka 4.0. Verified against the Orka 4.0 release source and the published 4.0.0 CLI build. Major version because the CLI command changes.
 
 ### Changed
 
