@@ -1,4 +1,4 @@
-# Orka3 CLI Skill A/B Test Queries
+# Orka CLI Skill A/B Test Queries
 
 ## Test Methodology
 Run each query against both skill versions and evaluate:

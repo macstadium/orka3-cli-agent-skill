@@ -34,7 +34,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/orka3-cli-v${{ steps.version.outputs.version }}.skill
+          files: dist/orka-cli-v${{ steps.version.outputs.version }}.skill
           generate_release_notes: true
           body: |
             ## Installation
@@ -43,7 +43,7 @@ jobs:
 
             ```bash
             # Download and extract the .skill archive
-            unzip orka3-cli-v${{ steps.version.outputs.version }}.skill -d ~/.claude/skills/orka3-cli
+            unzip orka-cli-v${{ steps.version.outputs.version }}.skill -d ~/.claude/skills/orka-cli
             ```
 
             Restart Claude Code after installation.
