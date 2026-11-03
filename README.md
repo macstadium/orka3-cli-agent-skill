@@ -2,52 +2,63 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-Structured Markdown context for AI agents to work accurately with the Orka CLI. Load it into any agent that supports custom instructions or project context, and it will give you correct `orka` commands instead of guessing. From Orka 4.0 the CLI is `orka`; on Orka 3.6 and earlier it's `orka3`, and the skill tells the agent which to use.
+Structured Markdown context that gives AI agents correct Orka CLI commands instead of guesses. It covers `orka` (Orka 4.x) and `orka3` (Orka 3.x), and tells the agent which one to use.
 
-## What's in this skill
+## What's in it
 
-| Path | Description |
-|------|-------------|
-| `orka-cli/SKILL.md` | Core concepts, which CLI to use (`orka` or `orka3`), quick reference, log sources, Android emulators (GA in Orka 4.0) |
-| `orka-cli/references/commands/` | Command syntax by domain: VM, image, emulator, node, admin, config, registry, vm-config, upgrade |
-| `orka-cli/references/workflows/` | Step-by-step guides: CI/CD, scaling, migration, image prep, admin setup, shared disk, cluster upgrades, license management |
-| `orka-cli/references/integrations/` | Integration references: GitHub Actions, GitLab, Buildkite, TeamCity, Packer |
+| Path | Contents |
+|------|----------|
+| `orka-cli/SKILL.md` | Core concepts, which CLI to use, quick reference |
+| `orka-cli/references/commands/` | Commands and flags: VM, image, emulator, node, admin, config, registry, VM config, upgrade, REST API |
+| `orka-cli/references/workflows/` | CI/CD, scaling, image prep, admin setup, shared disk, upgrades, migration, monitoring, Orka Burst, licensing |
+| `orka-cli/references/integrations/` | GitHub Actions, GitLab, Buildkite, Jenkins, TeamCity, Packer |
 | `orka-cli/references/troubleshooting/` | Auth, deployment, image, and network issues |
 
-## Agent compatibility
+Claude Code and Gemini CLI can run `orka` commands for you. Other agents use the same content to give you the command to run yourself.
 
-| Agent | Execution | Installation method |
-|-------|-----------|---------------------|
-| **Claude Code** | Runs `orka` (or `orka3`) commands directly | Native skills directory |
-| **Gemini CLI** | Runs `orka` (or `orka3`) commands directly | Project context file |
-| **Cursor** | Guidance only | Project or global rules |
-| **Windsurf** | Guidance only | Project or global rules |
-| **GitHub Copilot** | Guidance only | Repo instructions file |
-| **Claude Desktop** | Guidance only | Project knowledge |
-| **ChatGPT / other** | Guidance only | Custom instructions or file upload |
-
-**Execution** means the agent can call `orka` (or `orka3` on a 3.x cluster) directly on your machine. **Guidance only** means the agent gives you the correct commands; you run them yourself. Either way, the skill content is the same.
-
-> **Note:** When using an execution-capable agent, make sure you're connected to your Orka cluster via VPN before invoking CLI commands.
-> **Important:** AI agents can make mistakes, especially with destructive operations like deleting VMs or modifying namespaces. Always review what the agent plans to do before confirming, and keep a human in the loop for anything touching production infrastructure.
+> **Important:** Agents make mistakes, especially with destructive operations like deleting VMs or changing namespaces. Review what the agent plans to do before you confirm it. Running commands against your cluster also needs an authenticated CLI and network access to the cluster, for example over VPN.
 
 ## Prerequisites
 
 - Access to an Orka cluster
-- The Orka CLI installed and on your `$PATH`: `orka` for Orka 4.x clusters, `orka3` for Orka 3.x clusters. Both can be installed side by side.
-- The AI agent of your choice
+- The Orka CLI on your `$PATH`: `orka` for 4.x, `orka3` for 3.x. Both can be installed side by side.
 
-## Companion: MacStadium Docs MCP
+## Install
 
-For documentation lookup, use the [MacStadium Docs MCP server](https://docs.macstadium.com/mcp) alongside this skill. The two are complementary:
+### Claude Code
 
-| | This skill | Docs MCP |
-|---|---|---|
-| **What it does** | Runs `orka` (or `orka3`) commands and guides operational tasks | Answers questions by searching the MacStadium documentation |
-| **Best for** | Deploying VMs, managing images, setting up CI/CD, troubleshooting cluster state | Looking up feature details, understanding architecture, finding configuration options |
-| **Agent access** | Execution-capable agents run commands directly | Any MCP-compatible agent |
+Download the `.skill` archive from [Releases](https://github.com/macstadium/orka-cli-agent-skill/releases) and unzip it into your skills directory:
 
-To add the Docs MCP to Claude Code:
+```bash
+unzip orka-cli-v*.skill -d ~/.claude/skills/orka-cli
+```
+
+Or copy it from a clone:
+
+```bash
+git clone https://github.com/macstadium/orka-cli-agent-skill.git
+cp -r orka-cli-agent-skill/orka-cli ~/.claude/skills/orka-cli
+```
+
+Restart Claude Code. The skill loads automatically when you ask about Orka, or run `/orka-cli`.
+
+> Upgrading from the `orka3-cli` skill? Delete `~/.claude/skills/orka3-cli` first.
+
+### Other agents
+
+Load `orka-cli/SKILL.md` as context. For deeper coverage, add files from `orka-cli/references/`.
+
+| Agent | Command or step |
+|-------|-----------------|
+| Gemini CLI | `cat orka-cli/SKILL.md >> ~/.gemini/GEMINI.md` |
+| Cursor | `cp orka-cli/SKILL.md .cursor/rules/orka-cli.mdc` (or `~/.cursor/rules/` for all projects) |
+| Windsurf | `cp orka-cli/SKILL.md .windsurf/rules/orka-cli.md` (or `~/.windsurf/rules/`) |
+| GitHub Copilot | `cat orka-cli/SKILL.md >> .github/copilot-instructions.md` |
+| Claude Desktop | Add `SKILL.md` to a project's instructions and upload reference files as project knowledge, or upload the `.skill` archive in **Settings > Capabilities > Skills** |
+
+## Pair it with the docs MCP server
+
+The skill handles "do this in Orka." The [MacStadium docs MCP server](https://docs.macstadium.com/mcp) handles "what does this Orka feature do." To add it to Claude Code:
 
 ```bash
 claude mcp add --transport http macstadium-docs https://docs.macstadium.com/mcp
@@ -55,189 +66,27 @@ claude mcp add --transport http macstadium-docs https://docs.macstadium.com/mcp
 
 For other tools, see [Use these docs with AI tools](https://docs.macstadium.com/macstadium/macstadium-overview/use-these-docs-with-ai-tools).
 
-With both loaded, your agent handles "do this in Orka" and "what does this Orka feature do" without leaving the terminal.
-
-## Installation
-
-### Claude Code
-
-Claude Code auto-discovers skills from `~/.claude/skills/`. Once installed, the skill appears as `/orka-cli` and is invoked automatically when you ask about Orka.
-
-**Download from GitHub Releases (recommended)**
-
-```bash
-# Download the latest release from:
-# https://github.com/macstadium/orka-cli-agent-skill/releases
-unzip orka-cli-v*.skill -d ~/.claude/skills/orka-cli
-```
-
-**Clone and copy**
-
-```bash
-git clone https://github.com/macstadium/orka-cli-agent-skill.git
-cp -r orka-cli-agent-skill/orka-cli ~/.claude/skills/orka-cli
-```
-
-Restart Claude Code, then verify:
+## Example prompts
 
 ```
-/orka-cli
-```
-
-### Gemini CLI
-
-Copy `SKILL.md` into your Gemini context file:
-
-```bash
-cat orka-cli/SKILL.md >> ~/.gemini/GEMINI.md
-```
-
-To include the full reference content, append individual files from `orka-cli/references/` as needed.
-
-### Cursor
-
-Add the skill as a project rule or a global rule.
-
-**Project rule (applies to one repo)**
-
-```bash
-mkdir -p .cursor/rules
-cp orka-cli/SKILL.md .cursor/rules/orka-cli.mdc
-```
-
-**Global rule (applies to all projects)**
-
-```bash
-mkdir -p ~/.cursor/rules
-cp orka-cli/SKILL.md ~/.cursor/rules/orka-cli.mdc
-```
-
-You can also copy individual reference files into the same directory for deeper context.
-
-### Windsurf
-
-```bash
-# Project-level
-mkdir -p .windsurf/rules
-cp orka-cli/SKILL.md .windsurf/rules/orka-cli.md
-
-# Or global
-mkdir -p ~/.windsurf/rules
-cp orka-cli/SKILL.md ~/.windsurf/rules/orka-cli.md
-```
-
-### GitHub Copilot
-
-Add the skill content to your repository's Copilot instructions file:
-
-```bash
-cat orka-cli/SKILL.md >> .github/copilot-instructions.md
-```
-
-For personal use across all repos, go to **Settings > Copilot > Custom Instructions** in GitHub and paste the contents of `SKILL.md`.
-
-### Claude Desktop
-
-1. Create a new Project in Claude Desktop
-2. Open project settings and add custom instructions
-3. Paste the contents of `orka-cli/SKILL.md` into the instructions field
-4. Upload reference files from `orka-cli/references/` as project knowledge
-
-### Other agents
-
-Most agents that support custom instructions or file upload will work. Load `orka-cli/SKILL.md` as the base context. For broader coverage, also load the files under `references/commands/` and `references/workflows/`.
-
-## Usage
-
-Once loaded, ask your agent about anything Orka-related:
-
-```
-"Deploy 3 VMs with macOS Sonoma"
 "What flags does orka vm deploy accept?"
 "Show me all running VMs in namespace dev"
 "Set up a service account for CI/CD"
-"Help me troubleshoot a failed VM deployment"
-"Cache the Sequoia image across all nodes"
+"Deploy an Android emulator next to my VM"
 ```
 
-Execution-capable agents (Claude Code, Gemini CLI) will run the commands directly. Other agents will give you the correct syntax to run yourself.
-
-## Capabilities
-
-### VM management
-- Deploy VMs from local or OCI images
-- Configure CPU, memory, and disk resources
-- Save and commit VM states to images
-- Resize VM disks
-- Power operations (Intel: start/stop/suspend/resume)
-
-### Image management
-- List, copy, and delete local images
-- Cache images on nodes (Apple Silicon)
-- Push images to OCI registries
-- Generate empty images for OS installs (Intel)
-
-### Android emulators (GA in Orka 4.0, Apple silicon only)
-- Deploy an Android emulator attached to a running macOS VM
-- Reusable emulator configurations and gRPC access (Orka 4.0)
-- List and delete emulators; automatic cleanup when the parent VM is deleted
-- Connect over ADB using the relay IP/port returned by the CLI
-
-### Infrastructure
-- View and manage cluster nodes
-- Tag nodes for workload affinity
-- Create and manage namespaces
-- Configure access control with rolebindings
-- VM shared attached disk configuration (AWS and on-prem)
-- Log sources for deep troubleshooting (v3.4+)
-- Prometheus monitoring for nodes, the Orka operator, and CI runners
-- Orka Burst capacity (v3.3+)
-
-### Automation
-- Create and manage service accounts
-- Generate authentication tokens
-- Create VM configuration templates
-- Set up CI/CD pipelines (GitHub Actions, GitLab, Buildkite, Jenkins, Packer)
-- Clean up leaked CI VMs safely
-
-## Architecture support
-
-| Feature | Intel (amd64) | Apple Silicon (arm64) |
-|---------|---------------|----------------------|
-| VM Deploy | Yes | Yes |
-| Power Operations | Yes | No |
-| GPU Passthrough | Yes | No |
-| ISO Attach | Yes | No |
-| Image Cache | No | Yes |
-| OCI Push | No | Yes |
-| Android Emulators (GA in Orka 4.0) | No | Yes |
-
-## Building from source
+## Build from source
 
 ```bash
-# Build with an explicit version
-./scripts/build-skill.sh 1.2.0
-
-# Or use the latest git tag
-./scripts/build-skill.sh
+./scripts/build-skill.sh 2.0.0   # or omit the version to use the latest git tag
 ```
 
 The archive is written to `dist/orka-cli-v<VERSION>.skill`.
 
-## Documentation
+## More
 
-- [MacStadium Orka Documentation](https://docs.macstadium.com)
-- [Changelog](CHANGELOG.md)
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## License
+- [Orka documentation](https://docs.macstadium.com)
+- [Changelog](CHANGELOG.md) and [contributing](CONTRIBUTING.md)
+- Orka CLI issues: [MacStadium Support](https://support.macstadium.com). Skill issues: [GitHub Issues](https://github.com/macstadium/orka-cli-agent-skill/issues)
 
 Apache License 2.0. See [LICENSE](LICENSE).
-
-## Support
-
-- Orka CLI issues: [MacStadium Support](https://support.macstadium.com)
-- Skill issues: [GitHub Issues](https://github.com/macstadium/orka-cli-agent-skill/issues)
