@@ -1,5 +1,5 @@
 ---
-name: orka3-cli
+name: orka-cli
 description: >-
   Expert guidance for MacStadium's Orka CLI (`orka` for Orka 4.x, `orka3` for
   Orka 3.x): managing macOS virtualization infrastructure including VMs,
@@ -7,7 +7,7 @@ description: >-
   Silicon Mac hardware, plus Intel on Orka 3.6 and earlier.
 ---
 
-# Orka3 CLI Skill
+# Orka CLI Skill
 
 ## Which CLI: `orka` (Orka 4.x) or `orka3` (Orka 3.x)
 

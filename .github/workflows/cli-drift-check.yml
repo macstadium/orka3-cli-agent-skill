@@ -13,7 +13,7 @@ name: CLI drift check
 on:
   pull_request:
     paths:
-      - "orka3-cli/**"
+      - "orka-cli/**"
       - "scripts/cli-drift-check.py"
       - ".github/workflows/cli-drift-check.yml"
   schedule:
@@ -76,4 +76,4 @@ jobs:
           webhook: ${{ env.SLACK_WEBHOOK }}
           webhook-type: incoming-webhook
           payload: |
-            text: "${{ vars.DRIFT_CHECK_SLACK_MENTION }} :x: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Skill CLI drift check> failed against CLI ${{ env.VERSION }}: the orka3-cli skill is out of date with the latest release."
+            text: "${{ vars.DRIFT_CHECK_SLACK_MENTION }} :x: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Skill CLI drift check> failed against CLI ${{ env.VERSION }}: the orka-cli skill is out of date with the latest release."

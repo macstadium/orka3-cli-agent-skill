@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build a .skill archive from the orka3-cli/ directory.
+# Build a .skill archive from the orka-cli/ directory.
 #
 # Usage:
 #   ./scripts/build-skill.sh [VERSION]
 #
 # VERSION defaults to the latest git tag (stripped of the leading "v").
-# The archive is written to dist/orka3-cli-v<VERSION>.skill (a zip file).
+# The archive is written to dist/orka-cli-v<VERSION>.skill (a zip file).
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SKILL_DIR="$REPO_ROOT/orka3-cli"
+SKILL_DIR="$REPO_ROOT/orka-cli"
 DIST_DIR="$REPO_ROOT/dist"
 
 # Resolve version
@@ -27,11 +27,11 @@ fi
 
 # Validate skill directory
 if [[ ! -f "$SKILL_DIR/SKILL.md" ]]; then
-  echo "Error: orka3-cli/SKILL.md not found." >&2
+  echo "Error: orka-cli/SKILL.md not found." >&2
   exit 1
 fi
 
-ARCHIVE="$DIST_DIR/orka3-cli-v${VERSION}.skill"
+ARCHIVE="$DIST_DIR/orka-cli-v${VERSION}.skill"
 
 mkdir -p "$DIST_DIR"
 rm -f "$ARCHIVE"
@@ -40,4 +40,4 @@ rm -f "$ARCHIVE"
 (cd "$SKILL_DIR" && zip -r "$ARCHIVE" SKILL.md references/)
 
 echo "Built $ARCHIVE"
-echo "Install: unzip $ARCHIVE -d ~/.claude/skills/orka3-cli"
+echo "Install: unzip $ARCHIVE -d ~/.claude/skills/orka-cli"
