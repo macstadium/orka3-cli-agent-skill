@@ -180,7 +180,7 @@ Orka 3.6.0 introduced Upgrade Service v1, which let MacStadium push upgrades to 
 
 **Before starting a run:**
 ```bash
-orka upgrade versions              # Current version + available releases
+orka upgrade versions              # Current cluster version and any active run
 orka upgrade service status        # Eligible nodes vs. live/seen agents
 orka upgrade service agents        # Per-node agent version, status, lease age
 ```
@@ -214,7 +214,7 @@ Pin an explicit version (`orka upgrade run --version <VERSION>`) in change ticke
 ### Troubleshooting Upgrade Service runs
 
 - **Run stays `Pending`, then fails:** a run has up to 30 minutes to be admitted. Exceeding that usually means the target couldn't be resolved or another run was still active. Check `orka upgrade history`.
-- **Requested version not found or unavailable:** the release may be missing from the release index or temporarily quarantined. Check `orka upgrade versions`, then pick an available release or use `--version latest`.
+- **Requested version not found or unavailable:** the release may be missing from the release index or temporarily quarantined. `orka upgrade versions` shows only the current version, not the releases you can upgrade to, so check the version string, use `--version latest` for the highest available release, or ask MacStadium support which releases are available.
 - **Cluster already on the requested version:** not an error. Repeated run requests are safe because run names are timestamped and never collide.
 - **A node didn't upgrade:** run `orka upgrade service status`, then `orka upgrade service agents`. An agent that hasn't renewed its lease in 90 seconds reports `STALE`; one that has never been seen reports `MISSING`. Recover the agent, then start a new run.
 - **A node was skipped or its deadline expired:** read the skip reason in `orka upgrade status <RUN_NAME> -o json`. Common causes: no live agent, node already on the target version, node drained, or the node roster changed during the run.
