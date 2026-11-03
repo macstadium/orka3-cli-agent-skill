@@ -5,24 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Changed
-
-- **Skill renamed to `orka-cli`.** The repository is now `macstadium/orka-cli-agent-skill` (the old URL redirects), the skill directory is `orka-cli/`, and the skill name is `orka-cli`. If you installed the skill, remove `~/.claude/skills/orka3-cli` and install it again at `~/.claude/skills/orka-cli`. The skill still covers both `orka` (Orka 4.x) and `orka3` (Orka 3.x).
-
-### Added
-
-- `upgrade-commands.md`: command reference for `orka upgrade run`, `versions`, `status`, `history`, `service status`, and `service agents`, with options from the 4.0.0 CLI's help. With an Options list per command, the Monday drift check now warns when a CLI release adds an `upgrade` flag.
-- `image-commands.md`: deprecated `orka remote-image list` and `pull`, with their options. `config-commands.md`: `--no-descriptions` for each `orka completion` shell. The drift check now covers every 4.0.0 CLI command that has flags.
-
-## [2.0.0] - 2026-10-28
+## [2.0.0] - 2026-11-03
 
 Orka 4.0. Verified against the Orka 4.0 release source and the published 4.0.0 CLI build. Major version because the CLI command changes.
 
 ### Changed
 
-- **CLI renamed to `orka`.** Command examples, headings, and anchors use `orka`. `SKILL.md` has a new "Which CLI" section: `orka` is the 4.x CLI, `orka3` stays the 3.6 CLI, both install side by side and share the config file and the `orka` kubeconfig context, no alias ships, running the 4.0 CLI as `orka3` warns on stderr only, the optional `orka3` symlink bridge and its caveats, install with `brew install --cask orka` (the `orka` cask now serves 4.0.0 and installs alongside the `orka3` cask). Intel-only and removed commands, the Intel to Apple silicon migration, and other 3.6-only steps stay `orka3`. The skill name and directory are unchanged.
+- **Skill renamed to `orka-cli`.** The repository is now `macstadium/orka-cli-agent-skill` (the old URL redirects), the skill directory is `orka-cli/`, and the skill name is `orka-cli`. If you installed the skill, remove `~/.claude/skills/orka3-cli` and install it again at `~/.claude/skills/orka-cli`. The skill still covers both `orka` (Orka 4.x) and `orka3` (Orka 3.x).
+- **CLI renamed to `orka`.** Command examples, headings, and anchors use `orka`. `SKILL.md` has a new "Which CLI" section: `orka` is the 4.x CLI, `orka3` stays the 3.6 CLI, both install side by side and share the config file and the `orka` kubeconfig context, no alias ships, running the 4.0 CLI as `orka3` warns on stderr only, the optional `orka3` symlink bridge and its caveats, install with `brew install --cask orka` (the `orka` cask now serves 4.0.0 and installs alongside the `orka3` cask). Intel-only and removed commands, the Intel to Apple silicon migration, and other 3.6-only steps stay `orka3`.
 - Android emulators are GA in Orka 4.0, no longer early access.
 - Emulator commands resolve the namespace like `vm` (`--namespace`, `ORKA_DEFAULT_NAMESPACE`, the `orka` context, then `orka-default`); emulator configurations always live in `orka-default`.
 - Workflow and troubleshooting examples use `orka rbac ... --role dev`. `rolebinding` is deprecated and hidden from `--help` in 4.0; 3.6 users get an `orka3 rb` note.
@@ -32,6 +22,8 @@ Orka 4.0. Verified against the Orka 4.0 release source and the published 4.0.0 C
 
 ### Added
 
+- `upgrade-commands.md`: command reference for `orka upgrade run`, `versions`, `status`, `history`, `service status`, and `service agents`, with options from the 4.0.0 CLI's help. With an Options list per command, the Monday drift check now warns when a CLI release adds an `upgrade` flag.
+- `image-commands.md`: deprecated `orka remote-image list` and `pull`, with their options. `config-commands.md`: `--no-descriptions` for each `orka completion` shell. The drift check now covers every 4.0.0 CLI command that has flags.
 - `emulator-commands.md`: `emulator-config create`/`list`/`delete` (aliases `emc`, `emuconfig`), `--config` and `--grpc` on deploy, `--grpc=false` and `--device-profile ""` overrides, gRPC endpoint section, list columns including `-o wide`, CLI JSON keys (`relayIp`, `relayPort`, `grpcPort`), `PairedVMStopped` and `EmulatorUnschedulable`, sizing and density (about 5 to 6 GB of host memory per emulator, memory is the usual limit, CPU and memory come from the device profile, animation `adb` commands), REST paths, and the Play Store ADB limitation as a 4.0 known issue.
 - `vm-commands.md`: `--userdata` and `USERDATA-PHASE`, with run-once semantics, the meaning of `skipped`, and script visibility through Kubernetes read access. Removed `vm resize --user`/`--password`. `vm` and `image` reject unknown subcommands with a non-zero exit.
 - `admin-commands.md`: `rbac add-subject`/`list-subjects`/`remove-subject` with `--role admin|dev`, and the per-subcommand `rolebinding` deprecation messages.
