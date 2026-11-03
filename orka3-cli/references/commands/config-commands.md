@@ -141,6 +141,26 @@ orka completion zsh > "${fpath[1]}/_orka"
 orka completion zsh > $(brew --prefix)/share/zsh/site-functions/_orka
 ```
 
+#### orka completion bash
+
+**Options:**
+- `--no-descriptions` - Leave command and flag descriptions out of the completions
+
+#### orka completion fish
+
+**Options:**
+- `--no-descriptions` - Leave command and flag descriptions out of the completions
+
+#### orka completion powershell
+
+**Options:**
+- `--no-descriptions` - Leave command and flag descriptions out of the completions
+
+#### orka completion zsh
+
+**Options:**
+- `--no-descriptions` - Leave command and flag descriptions out of the completions
+
 ### orka version
 
 Print the local CLI version and the versions of the Orka API server and operator on the cluster.

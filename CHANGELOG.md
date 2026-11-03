@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `upgrade-commands.md`: command reference for `orka upgrade run`, `versions`, `status`, `history`, `service status`, and `service agents`, with options from the 4.0.0 CLI's help. With an Options list per command, the Monday drift check now warns when a CLI release adds an `upgrade` flag.
+- `image-commands.md`: deprecated `orka remote-image list` and `pull`, with their options. `config-commands.md`: `--no-descriptions` for each `orka completion` shell. The drift check now covers every 4.0.0 CLI command that has flags.
+
 ## [2.0.0] - 2026-10-28
 
 Orka 4.0. Verified against the Orka 4.0 release source, the published 4.0.0 CLI build, and macstadium-docs #383, #390, #394, #402, #406, #417, and #436. Major version because the CLI command changes.
