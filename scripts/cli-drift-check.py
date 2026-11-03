@@ -35,8 +35,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-SKILL_DIR = "orka3-cli"
-COMMAND_REFS = "orka3-cli/references/commands"
+SKILL_DIR = "orka-cli"
+COMMAND_REFS = "orka-cli/references/commands"
 LONG_FLAG_RE = re.compile(r"(?<![\w-])(--[a-z][\w-]*)")
 # A generated option line: "  -o, --output string   help" or "      --all   help"
 OPTION_LINE_RE = re.compile(r"^\s*(?:(-\w),\s+)?(--[a-z][\w-]*)(?:\s(\w+))?", re.M)
