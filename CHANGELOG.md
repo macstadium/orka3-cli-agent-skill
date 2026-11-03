@@ -90,7 +90,7 @@ Ports Orka 3.x documentation changes from docs.macstadium.com (September to Octo
 
 ## [1.5.0] - 2026-10-28
 
-Folds in verified findings from Robert Elwell's Orka agent playbooks, which were tested against a live Orka 3.6.3 cluster. Every item was checked against the Orka 3.6 CLI help, the Orka source, the public docs, or the integration repos before inclusion.
+Folds in verified findings from Orka agent playbooks tested against a live Orka 3.6.3 cluster. Every item was checked against the Orka 3.6 CLI help, the Orka source, the public docs, or the integration repos before inclusion.
 
 ### Added
 
