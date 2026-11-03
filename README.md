@@ -8,8 +8,8 @@ Structured Markdown context for AI agents to work accurately with the Orka CLI. 
 
 | Path | Description |
 |------|-------------|
-| `orka-cli/SKILL.md` | Core concepts, quick reference, v3.6.4 features, log sources, early-access Android emulator support (v3.7.0-alpha+) |
-| `orka-cli/references/commands/` | Command syntax by domain: VM, image, emulator (early access), node, admin, config, registry, vm-config |
+| `orka-cli/SKILL.md` | Core concepts, which CLI to use (`orka` or `orka3`), quick reference, log sources, Android emulators (GA in Orka 4.0) |
+| `orka-cli/references/commands/` | Command syntax by domain: VM, image, emulator, node, admin, config, registry, vm-config, upgrade |
 | `orka-cli/references/workflows/` | Step-by-step guides: CI/CD, scaling, migration, image prep, admin setup, shared disk, cluster upgrades, license management |
 | `orka-cli/references/integrations/` | Integration references: GitHub Actions, GitLab, Buildkite, TeamCity, Packer |
 | `orka-cli/references/troubleshooting/` | Auth, deployment, image, and network issues |
@@ -177,8 +177,9 @@ Execution-capable agents (Claude Code, Gemini CLI) will run the commands directl
 - Push images to OCI registries
 - Generate empty images for OS installs (Intel)
 
-### Android emulators (early access, Orka 3.7.0-alpha+, Apple Silicon only)
+### Android emulators (GA in Orka 4.0, Apple silicon only)
 - Deploy an Android emulator attached to a running macOS VM
+- Reusable emulator configurations and gRPC access (Orka 4.0)
 - List and delete emulators; automatic cleanup when the parent VM is deleted
 - Connect over ADB using the relay IP/port returned by the CLI
 
@@ -209,7 +210,7 @@ Execution-capable agents (Claude Code, Gemini CLI) will run the commands directl
 | ISO Attach | Yes | No |
 | Image Cache | No | Yes |
 | OCI Push | No | Yes |
-| Android Emulators (early access, v3.7.0-alpha+) | No | Yes |
+| Android Emulators (GA in Orka 4.0) | No | Yes |
 
 ## Building from source
 
