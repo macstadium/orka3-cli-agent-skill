@@ -14,7 +14,7 @@ Structured Markdown context that gives AI agents correct Orka CLI commands inste
 | `orka-cli/references/integrations/` | GitHub Actions, GitLab, Buildkite, Jenkins, TeamCity, Packer |
 | `orka-cli/references/troubleshooting/` | Auth, deployment, image, and network issues |
 
-Claude Code and Gemini CLI can run `orka` commands for you. Other agents use the same content to give you the command to run yourself.
+Claude Code, Gemini CLI, and GitHub Copilot can run `orka` commands for you. Other agents use the same content to give you the command to run yourself.
 
 > **Important:** Agents make mistakes, especially with destructive operations like deleting VMs or changing namespaces. Review what the agent plans to do before you confirm it. Running commands against your cluster also needs an authenticated CLI and network access to the cluster, for example over VPN.
 
